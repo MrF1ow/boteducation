@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -23,27 +24,51 @@ import {
 } from '@/components/ui/select'
 import { IconPlus, IconCopy, IconTrash, IconBan, IconCheck, IconChevronDown, IconChevronUp } from '@tabler/icons-react'
 import { toast } from 'sonner'
-import { createMcpToken, revokeMcpToken, deleteMcpToken, type McpToken } from '@/app/actions/mcp-tokens'
+import {
+  createMcpToken,
+  revokeMcpToken,
+  deleteMcpToken,
+  type McpToken,
+  type TokenScopeCourse,
+} from '@/app/actions/mcp-tokens'
 import { ConnectClaudeCard } from '@/components/dashboard/connect-claude-card'
+import { professorPasteBlock } from '@/lib/mcp/token-create'
+import { useRouter } from 'next/navigation'
 
 interface ApiTokensPageProps {
   tokens: McpToken[]
   mcpUrl: string
+  courses: TokenScopeCourse[]
 }
 
-export default function ApiTokensPage({ tokens, mcpUrl }: ApiTokensPageProps) {
+export default function ApiTokensPage({ tokens, mcpUrl, courses }: ApiTokensPageProps) {
   const t = useTranslations('dashboard.admin.apiTokens')
+  const router = useRouter()
   const [createOpen, setCreateOpen] = useState(false)
   const [revealedToken, setRevealedToken] = useState<string | null>(null)
   const [tokenName, setTokenName] = useState('')
   const [expiration, setExpiration] = useState<string>('never')
+  const [courseIds, setCourseIds] = useState<number[]>([])
   const [isPending, startTransition] = useTransition()
-  const [copied, setCopied] = useState(false)
-  const [copiedConfig, setCopiedConfig] = useState(false)
+  const [copied, setCopied] = useState<'token' | 'config' | 'paste' | null>(null)
   const [showInstructions, setShowInstructions] = useState(false)
 
-  // OAuth custom-connector URL — same endpoint without the /cli token path.
   const connectorUrl = mcpUrl.replace(/\/cli$/, '')
+
+  const toggleCourse = (courseId: number) => {
+    setCourseIds((current) =>
+      current.includes(courseId)
+        ? current.filter((id) => id !== courseId)
+        : [...current, courseId],
+    )
+  }
+
+  const resetCreateForm = () => {
+    setRevealedToken(null)
+    setTokenName('')
+    setExpiration('never')
+    setCourseIds([])
+  }
 
   const handleCreate = () => {
     if (!tokenName.trim()) {
@@ -53,10 +78,11 @@ export default function ApiTokensPage({ tokens, mcpUrl }: ApiTokensPageProps) {
     startTransition(async () => {
       try {
         const expiresInDays = expiration === 'never' ? undefined : Number(expiration)
-        const result = await createMcpToken(tokenName.trim(), expiresInDays)
+        const result = await createMcpToken(tokenName.trim(), expiresInDays, { courseIds })
         setRevealedToken(result.token)
         setTokenName('')
         setExpiration('never')
+        router.refresh()
         toast.success(t('toasts.created'))
       } catch (err) {
         toast.error(err instanceof Error ? err.message : t('toasts.createError'))
@@ -68,6 +94,7 @@ export default function ApiTokensPage({ tokens, mcpUrl }: ApiTokensPageProps) {
     startTransition(async () => {
       try {
         await revokeMcpToken(tokenId)
+        router.refresh()
         toast.success(t('toasts.revoked'))
       } catch (err) {
         toast.error(err instanceof Error ? err.message : t('toasts.revokeError'))
@@ -79,6 +106,7 @@ export default function ApiTokensPage({ tokens, mcpUrl }: ApiTokensPageProps) {
     startTransition(async () => {
       try {
         await deleteMcpToken(tokenId)
+        router.refresh()
         toast.success(t('toasts.deleted'))
       } catch (err) {
         toast.error(err instanceof Error ? err.message : t('toasts.deleteError'))
@@ -86,15 +114,10 @@ export default function ApiTokensPage({ tokens, mcpUrl }: ApiTokensPageProps) {
     })
   }
 
-  const copyToClipboard = async (text: string, type: 'token' | 'config') => {
+  const copyToClipboard = async (text: string, type: 'token' | 'config' | 'paste') => {
     await navigator.clipboard.writeText(text)
-    if (type === 'token') {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } else {
-      setCopiedConfig(true)
-      setTimeout(() => setCopiedConfig(false), 2000)
-    }
+    setCopied(type)
+    setTimeout(() => setCopied(null), 2000)
   }
 
   const configSnippet = (token: string) => JSON.stringify({
@@ -121,9 +144,19 @@ export default function ApiTokensPage({ tokens, mcpUrl }: ApiTokensPageProps) {
     return new Date(expiresAt) < new Date()
   }
 
+  const courseTitleById = new Map(courses.map((course) => [course.course_id, course.title]))
+
+  const scopeLabel = (token: McpToken) => {
+    if (!token.course_ids || token.course_ids.length === 0) return t('token.allCourses')
+    if (token.course_ids.length === 1) {
+      const title = courseTitleById.get(token.course_ids[0])
+      return title ?? t('token.courseCount', { count: 1 })
+    }
+    return t('token.courseCount', { count: token.course_ids.length })
+  }
+
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
@@ -137,13 +170,9 @@ export default function ApiTokensPage({ tokens, mcpUrl }: ApiTokensPageProps) {
         </Button>
         <Dialog open={createOpen} onOpenChange={(open) => {
           setCreateOpen(open)
-          if (!open) {
-            setRevealedToken(null)
-            setTokenName('')
-            setExpiration('never')
-          }
+          if (!open) resetCreateForm()
         }}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-lg">
             {revealedToken ? (
               <>
                 <DialogHeader>
@@ -153,6 +182,23 @@ export default function ApiTokensPage({ tokens, mcpUrl }: ApiTokensPageProps) {
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1.5 block">{t('revealDialog.pasteLabel')}</Label>
+                    <div className="relative">
+                      <pre className="bg-muted rounded-md p-3 text-xs overflow-x-auto whitespace-pre-wrap">
+                        {professorPasteBlock(mcpUrl, revealedToken)}
+                      </pre>
+                      <Button
+                        variant="outline"
+                        size="icon-sm"
+                        className="absolute top-2 right-2"
+                        onClick={() => copyToClipboard(professorPasteBlock(mcpUrl, revealedToken), 'paste')}
+                      >
+                        {copied === 'paste' ? <IconCheck className="size-3" /> : <IconCopy className="size-3" />}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">{t('revealDialog.pasteHint')}</p>
+                  </div>
                   <div className="flex items-center gap-2">
                     <Input
                       readOnly
@@ -164,7 +210,7 @@ export default function ApiTokensPage({ tokens, mcpUrl }: ApiTokensPageProps) {
                       size="icon"
                       onClick={() => copyToClipboard(revealedToken, 'token')}
                     >
-                      {copied ? <IconCheck className="size-4" /> : <IconCopy className="size-4" />}
+                      {copied === 'token' ? <IconCheck className="size-4" /> : <IconCopy className="size-4" />}
                     </Button>
                   </div>
                   <div>
@@ -179,7 +225,7 @@ export default function ApiTokensPage({ tokens, mcpUrl }: ApiTokensPageProps) {
                         className="absolute top-2 right-2"
                         onClick={() => copyToClipboard(configSnippet(revealedToken), 'config')}
                       >
-                        {copiedConfig ? <IconCheck className="size-3" /> : <IconCopy className="size-3" />}
+                        {copied === 'config' ? <IconCheck className="size-3" /> : <IconCopy className="size-3" />}
                       </Button>
                     </div>
                   </div>
@@ -220,6 +266,25 @@ export default function ApiTokensPage({ tokens, mcpUrl }: ApiTokensPageProps) {
                       </SelectContent>
                     </Select>
                   </div>
+                  <fieldset className="space-y-2">
+                    <legend className="text-sm font-medium">{t('createDialog.courseScope')}</legend>
+                    <p className="text-xs text-muted-foreground">{t('createDialog.courseScopeHint')}</p>
+                    {courses.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">{t('createDialog.noCourses')}</p>
+                    ) : (
+                      <div className="max-h-40 space-y-2 overflow-y-auto rounded-md border p-3">
+                        {courses.map((course) => (
+                          <label key={course.course_id} className="flex items-start gap-2 text-sm">
+                            <Checkbox
+                              checked={courseIds.includes(course.course_id)}
+                              onCheckedChange={() => toggleCourse(course.course_id)}
+                            />
+                            <span>{course.title}</span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </fieldset>
                 </div>
                 <DialogFooter>
                   <Button onClick={handleCreate} disabled={isPending}>
@@ -232,10 +297,8 @@ export default function ApiTokensPage({ tokens, mcpUrl }: ApiTokensPageProps) {
         </Dialog>
       </div>
 
-      {/* Connect Claude (OAuth custom connector) */}
       <ConnectClaudeCard connectorUrl={connectorUrl} />
 
-      {/* Advanced: API token instructions */}
       <Card>
         <CardHeader
           className="cursor-pointer"
@@ -266,7 +329,6 @@ export default function ApiTokensPage({ tokens, mcpUrl }: ApiTokensPageProps) {
         )}
       </Card>
 
-      {/* Token List */}
       <Card>
         <CardHeader>
           <CardTitle className="text-sm">{t('yourTokens.title')}</CardTitle>
@@ -306,10 +368,12 @@ export default function ApiTokensPage({ tokens, mcpUrl }: ApiTokensPageProps) {
                           </span>
                         )}
                       </div>
-                      <div className="flex gap-3 text-xs text-muted-foreground">
+                      <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
                         <span>{t('token.created', { date: formatDate(token.created_at) })}</span>
                         {token.last_used_at && <span>{t('token.lastUsed', { date: formatDate(token.last_used_at) })}</span>}
                         {token.expires_at && <span>{t('token.expires', { date: formatDate(token.expires_at) })}</span>}
+                        <span>{t('token.roleProfessor')}</span>
+                        <span>{scopeLabel(token)}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-1">

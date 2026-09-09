@@ -805,6 +805,7 @@ export async function getAllSettingsByCategory(): Promise<CategorySettingsRespon
       auto_enrollment: 'enrollment', require_enrollment_approval: 'enrollment',
       max_enrollments_per_user: 'enrollment', allow_self_enrollment: 'enrollment',
       enrollment_expiration_days: 'enrollment', course_capacity_enabled: 'enrollment',
+      auto_publish_grades: 'general',
     }
 
     const grouped = (data || []).reduce((acc: Record<string, SettingsGroup>, s: SettingRow) => {

@@ -59,4 +59,12 @@ describe('getAllSettingsByCategory', () => {
       ['binance_enabled', 'lemonsqueezy_enabled', 'paypal_enabled', 'solana_enabled', 'stripe_enabled'].sort()
     )
   })
+
+  it('groups auto_publish_grades under general', async () => {
+    state.rows = [{ setting_key: 'auto_publish_grades', setting_value: { enabled: true } }]
+    const r = await getAllSettingsByCategory()
+    expect(r.success).toBe(true)
+    expect(r.data?.general?.auto_publish_grades?.value?.enabled).toBe(true)
+    expect(r.data?.payment?.auto_publish_grades).toBeUndefined()
+  })
 })

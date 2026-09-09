@@ -2,9 +2,10 @@ import { getUserRole } from '@/lib/supabase/get-user-role'
 import { getCurrentTenant } from '@/lib/supabase/tenant'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
-import { listMcpTokens } from '@/app/actions/mcp-tokens'
+import { listMcpTokens, listTokenScopeCourses } from '@/app/actions/mcp-tokens'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import ApiTokensPage from '@/components/dashboard/api-tokens-page'
+import { mcpEndpointUrl } from '@/lib/mcp/token-create'
 
 export default async function AdminApiTokensPage() {
   const role = await getUserRole()
@@ -13,12 +14,13 @@ export default async function AdminApiTokensPage() {
   }
 
   const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
-  const { data: tokens } = await listMcpTokens()
+  const [{ data: tokens }, { data: courses }] = await Promise.all([
+    listMcpTokens(),
+    listTokenScopeCourses(),
+  ])
   const tenant = await getCurrentTenant()
   const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'localhost:3000'
-  const mcpUrl = tenant?.slug
-    ? `https://${tenant.slug}.${platformDomain}/api/mcp/cli`
-    : `https://${platformDomain}/api/mcp/cli`
+  const mcpUrl = mcpEndpointUrl(tenant?.slug, platformDomain)
 
   return (
     <div className="min-h-screen bg-background" data-testid="api-tokens-page">
@@ -35,7 +37,7 @@ export default async function AdminApiTokensPage() {
       </header>
 
       <main className="mx-auto container px-4 py-6 sm:px-6 lg:px-8">
-        <ApiTokensPage tokens={tokens ?? []} mcpUrl={mcpUrl} />
+        <ApiTokensPage tokens={tokens ?? []} mcpUrl={mcpUrl} courses={courses} />
       </main>
     </div>
   )

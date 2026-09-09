@@ -770,6 +770,40 @@
         "settings": "Configuración",
         "sequentialCompletion": "Completar lecciones en orden",
         "sequentialCompletionDescription": "Cuando está activado, los estudiantes deben completar las lecciones en orden. No pueden avanzar a lecciones posteriores.",
+        "professorBots": {
+          "title": "Profesores Grok",
+          "description": "Vincula un profesor Grok a este curso. Pega la URL MCP y el token desde Tokens de API en el bot. No guardes una clave de xAI aquí.",
+          "empty": "Aún no hay profesores.",
+          "add": "Añadir profesor",
+          "name": "Nombre",
+          "namePlaceholder": "ej. Profesor de CS 101",
+          "systemPrompt": "Prompt del sistema",
+          "systemPromptPlaceholder": "Cómo debe enseñar y calificar este profesor.",
+          "rubricRules": "Reglas de rúbrica",
+          "rubricRulesPlaceholder": "Reglas de puntuación que el profesor debe seguir.",
+          "latePolicy": "Política de retraso predeterminada",
+          "lateReject": "Rechazar entregas tardías",
+          "lateAccept": "Aceptar entregas tardías",
+          "lateAcceptUntil": "Aceptar hasta una fecha límite",
+          "latePenalize": "Aceptar con penalización diaria",
+          "acceptUntil": "Aceptar hasta",
+          "percentPerDay": "Porcentaje de penalización por día",
+          "model": "Modelo",
+          "linkedToken": "Token MCP vinculado",
+          "noToken": "Sin token vinculado",
+          "toolAllowlist": "Lista de herramientas",
+          "toolAllowlistHint": "Si no marcas ninguna, el bot puede usar todas las herramientas de profesor. Si marcas algunas, esas son las únicas que debería usar.",
+          "save": "Guardar",
+          "saving": "Guardando…",
+          "create": "Crear",
+          "cancel": "Cancelar",
+          "delete": "Eliminar",
+          "saved": "Profesor guardado",
+          "created": "Profesor creado",
+          "deleted": "Profesor eliminado",
+          "saveError": "No se pudo guardar el profesor",
+          "deleteError": "No se pudo eliminar el profesor"
+        },
         "min": "min",
         "video": "Video",
         "status": {
@@ -3166,6 +3200,14 @@
             "title": "Wallet de Solana",
             "description": "La wallet receptora de tu escuela para pagos en cripto Solana (pago único y suscripción)."
           },
+          "grading": {
+            "title": "Calificación del profesor",
+            "description": "Controla si las calificaciones de Grok se publican de inmediato.",
+            "autoPublish": "Publicar calificaciones de IA automáticamente",
+            "autoPublishHint": "Si está activado, las calificaciones MCP del profesor son visibles para los estudiantes de inmediato. Si está desactivado, quedan en borrador hasta que se publiquen.",
+            "saved": "Ajuste de publicación automática guardado",
+            "saveError": "No se pudo guardar el ajuste de publicación automática"
+          },
           "personalPreferences": {
             "title": "Preferencias personales",
             "description": "Estos ajustes aplican solo a tu cuenta, no a toda la escuela."
@@ -3375,7 +3417,10 @@
           "expired": "Expirado",
           "created": "Creado {date}",
           "lastUsed": "Último uso {date}",
-          "expires": "Expira {date}"
+          "expires": "Expira {date}",
+          "roleProfessor": "Profesor",
+          "allCourses": "Todos los cursos",
+          "courseCount": "{count, plural, one {# curso} other {# cursos}}"
         },
         "createDialog": {
           "title": "Crear Token de API",
@@ -3388,11 +3433,16 @@
           "expiration90d": "90 días",
           "expirationNever": "Nunca",
           "creating": "Creando...",
-          "create": "Crear Token"
+          "create": "Crear Token",
+          "courseScope": "Alcance de cursos",
+          "courseScopeHint": "Si no marcas ninguno, el token cubre todos los cursos a los que esta cuenta puede acceder. Marca uno o más para limitarlo.",
+          "noCourses": "Aún no hay cursos. Crea un curso primero y luego limita el token."
         },
         "revealDialog": {
           "title": "Token Creado",
           "description": "Copia este token ahora. No se mostrará de nuevo.",
+          "pasteLabel": "Pegar en Grok",
+          "pasteHint": "La guía para crear el bot de Grok vive fuera de este repositorio. No pongas una clave de xAI aquí.",
           "configLabel": "Configuración de Claude Desktop",
           "done": "Listo"
         },
