@@ -32,6 +32,9 @@ npx playwright test -g "name"    # Run single test
 
 Branches: `<type>/<slug>-<issueNumber>` (e.g. `fix/binance-settings-category-479`).
 
+Cloud Agents use `.cursor/environment.json` → `scripts/cloud-agent-install.sh` then `scripts/cloud-agent-start.sh` (nested Docker, local Supabase, Next on `:3000`). Open `http://lvh.me:3000`, not localhost. Seeded login: `student@e2etest.com` / `password123`.
+
+
 ## Architecture
 
 ### Multi-Tenancy

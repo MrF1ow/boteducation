@@ -1,0 +1,13 @@
+{
+  "name": "lms-front",
+  "install": "bash scripts/cloud-agent-install.sh",
+  "start": "bash scripts/cloud-agent-start.sh",
+  "chromeExecutablePath": "/usr/bin/google-chrome",
+  "ports": [
+    { "name": "Next.js", "port": 3000 },
+    { "name": "Supabase API", "port": 54321 },
+    { "name": "Supabase DB", "port": 54322 },
+    { "name": "Supabase Studio", "port": 54323 },
+    { "name": "Inbucket", "port": 54324 }
+  ]
+}
