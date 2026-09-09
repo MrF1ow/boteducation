@@ -10,33 +10,28 @@ BotEducation is a fork of [lms-front](https://github.com/guillermoscript/lms-fro
 [![Supabase](https://img.shields.io/badge/Supabase-Postgres%20%2B%20RLS-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-**Setup:** [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md) · **Contribute:** [`CONTRIBUTING.md`](CONTRIBUTING.md) · **Program:** [`docs/plans/boteducation-program.md`](docs/plans/boteducation-program.md)
+**Setup:** [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md) · **Contribute:** [`CONTRIBUTING.md`](CONTRIBUTING.md) · **Professor MCP tools:** [`docs/plans/03-mcp-professor.md`](docs/plans/03-mcp-professor.md)
 
-**Stack:** Next.js 16 · React 19 · TypeScript · Supabase (Postgres + Auth + RLS) · Shadcn UI (base-mira) · Tailwind CSS v4 · next-intl (en/es)
-
-Payment provider modules remain in the tree until a later PR removes them. Leave those env keys empty for a self-hosted school.
+**Stack:** Next.js 16 App Router · TypeScript · Supabase (Postgres + Auth + RLS) · MCP at `/api/mcp`
 
 ## What's in it
 
 | | |
 |--|--|
-| **One school** | One deploy is one school. Subdomain routing and tenant theming still exist in this fork. Isolation is Row Level Security in Postgres. |
-| **Courses** | Block-editor lessons with rich MDX components, exercises, checkpoints, exams with AI-assisted grading, progress tracking, FSRS spaced repetition. |
-| **Payments** | Stripe, PayPal, Lemon Squeezy, Solana, Binance, and manual receipts remain in the tree. BotEducation does not sell a platform. Leave those keys empty. |
-| **Monetization** | Product, subscription, payout, and platform-billing code is still present. It is not the product. A later PR removes that nav and those routes. |
-| **AI tutor** | An MCP server (`mcp-server/`) exposing the LMS as tools + interactive widgets: drill practice, weak-topic remediation, exam readiness, ask-a-teacher. Works from any MCP client, auth'd via Supabase OAuth 2.1 with RLS intact. |
-| **Engagement** | XP, levels, streaks, achievements, challenges, weekly leagues, coin store, certificates with public verification, community spaces with polls and moderation. |
-| **Creator tools** | AI landing-page generation, drag-and-drop page builder, guided onboarding, guided tours. |
-| **i18n** | Full English + Spanish across the app, built for LATAM and English-speaking markets. |
+| **One school** | One deploy is one school. Local login still uses `lvh.me` so the host can carry a tenant slug. Isolation is Row Level Security in Postgres. |
+| **Courses** | Lessons, exercises, exams, homework assignments, progress. |
+| **Grok professors** | Bots call MCP tools at `https://<your-domain>/api/mcp`. Humans bind a bot and paste a bearer token. There is no Grok chat UI in this app. |
+| **Students** | Course home, assignments, grades, calendar. |
+| **i18n** | English and Spanish. Do not delete it. |
 
-Self-host one school on your own machines. The MIT license covers that use.
+Self-host one school on your own machines. The MIT license covers that use. Commerce routes in this fork redirect to `/dashboard`; payment modules may still sit in the tree until a later delete.
 
 ## Prerequisites
 
 - Node.js 20+
 - Docker (required for local Supabase)
 - [Supabase CLI](https://supabase.com/docs/guides/cli)
-- Stripe CLI _(optional — only for testing webhooks locally)_
+- A Grok / xAI bot. Put `XAI_API_KEY` on the Grok side, not in this app.
 
 ## Quick Start
 
@@ -88,6 +83,19 @@ Self-host one school on your own machines. The MIT license covers that use.
 
    Local-dev credentials only — seeded by `npm run db:reset`.
 
+7. **Connect a Grok professor**
+
+   Log in as `owner@e2etest.com`. Open **API Tokens**. Create a professor token scoped to a course. Copy the paste block:
+
+   ```
+   MCP URL
+   https://<your-domain>/api/mcp
+   Authorization
+   Bearer <token>
+   ```
+
+   In the Grok / xAI bot config, add a remote MCP server with that URL and bearer token. On the course settings page, save a professor bot (system prompt, rubric, optional linked token). Tool names live in [`docs/plans/03-mcp-professor.md`](docs/plans/03-mcp-professor.md).
+
 **Full walkthrough — seed contents, migrations, tests, optional services, troubleshooting: [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md).**
 
 ## npm Scripts
@@ -108,17 +116,17 @@ Self-host one school on your own machines. The MIT license covers that use.
 ## Documentation
 
 - [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md) — **full local setup guide: env, seed data, migrations, tests, troubleshooting**
+- [`docs/plans/03-mcp-professor.md`](docs/plans/03-mcp-professor.md) — professor MCP tools
 - [`CLAUDE.md`](CLAUDE.md) — architecture reference for AI agents and developers
 - [`docs/DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md) — complete DB schema
 - [`docs/AUTH.md`](docs/AUTH.md) — authentication flows
-- [`docs/MONETIZATION.md`](docs/MONETIZATION.md) — billing and payments
-- [`docs/MCP_SETUP.md`](docs/MCP_SETUP.md) — the MCP server and AI tutor tooling
+- [`docs/MCP_SETUP.md`](docs/MCP_SETUP.md) — the MCP server
 
-More in [`docs/`](docs/) — deployment, i18n, gamification, community spaces, the landing-page builder.
+More in [`docs/`](docs/).
 
 ## Contributing
 
-Contributions are welcome — bug reports, translations, docs fixes, new payment providers, features.
+Contributions are welcome — bug reports, translations, docs fixes, features.
 
 - Read [`CONTRIBUTING.md`](CONTRIBUTING.md) for the workflow and what reviewers look for
 - Browse [`good first issue`](https://github.com/MrF1ow/boteducation/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) and [`help wanted`](https://github.com/MrF1ow/boteducation/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22)
