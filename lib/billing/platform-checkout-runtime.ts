@@ -7,11 +7,7 @@ import type {
 import type { PlatformProviderRuntimeStatus } from '@/lib/billing/platform-checkout-availability'
 
 const REQUIRED_ENV: Partial<Record<PaymentProvider, string[]>> = {
-  // Platform Stripe checkout is not executable without the separate webhook
-  // secret: the hosted session can be created with STRIPE_SECRET_KEY, but the
-  // subscription would never activate when /api/billing/webhook/stripe cannot
-  // verify the completion event.
-  stripe: ['STRIPE_SECRET_KEY', 'STRIPE_PLATFORM_WEBHOOK_SECRET'],
+  stripe: [],
   paypal: ['PAYPAL_CLIENT_ID', 'PAYPAL_CLIENT_SECRET'],
   binance: ['BINANCE_PAY_API_KEY', 'BINANCE_PAY_API_SECRET'],
   lemonsqueezy: ['LEMONSQUEEZY_API_KEY', 'LEMONSQUEEZY_STORE_ID', 'LEMONSQUEEZY_WEBHOOK_SECRET'],

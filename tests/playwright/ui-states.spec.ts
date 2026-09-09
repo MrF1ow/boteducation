@@ -8,7 +8,7 @@
  * - Language switching (en <-> es)
  */
 import { test, expect } from '@playwright/test'
-import { loginAsStudent, loginAsTenantStudent } from './utils/auth'
+import { loginAsStudent, loginAsTeacher, loginAsTenantStudent } from './utils/auth'
 import { BASE, TENANT_BASE, LOCALE } from './utils/constants'
 
 /* ================================================================== */
@@ -27,17 +27,13 @@ test.describe('Empty States', () => {
     expect(body!.length).toBeGreaterThan(50)
   })
 
-  test('payments page shows empty state when no requests', async ({ page }) => {
+  test('payments URL redirects away from the deleted payments UI', async ({ page }) => {
     test.setTimeout(60_000)
-    // Use tenant student (Alice) — less likely to have payment requests on code-academy
     await loginAsTenantStudent(page)
     await page.goto(`${TENANT_BASE}/${LOCALE}/dashboard/student/payments`)
-
-    await expect(page.getByTestId('payments-page')).toBeVisible({ timeout: 15_000 })
-
-    // Either shows empty state card or existing requests table
-    const body = await page.locator('body').textContent()
-    expect(body!.length).toBeGreaterThan(50)
+    await expect(page).not.toHaveURL(/\/payments/)
+    await expect(page.getByTestId('payments-page')).toHaveCount(0)
+    await expect(page.getByText('This page could not be found')).toHaveCount(0)
   })
 
   test('progress page renders stats and course progress', async ({ page }) => {
@@ -49,15 +45,23 @@ test.describe('Empty States', () => {
     await expect(page.getByTestId('progress-title')).toBeVisible()
   })
 
-  test('store page shows heading', async ({ page }) => {
+  test('store URL redirects away from the deleted store UI', async ({ page }) => {
     test.setTimeout(60_000)
     await loginAsStudent(page)
     await page.goto(`${BASE}/${LOCALE}/dashboard/student/store`)
+    await expect(page).not.toHaveURL(/\/store/)
+    await expect(page.getByTestId('store-page')).toHaveCount(0)
+    await expect(page.getByText('This page could not be found')).toHaveCount(0)
+    await expect(page.getByTestId('student-dashboard')).toBeVisible({ timeout: 15_000 })
+  })
 
-    await expect(page.getByTestId('store-page')).toBeVisible({ timeout: 15_000 })
-
-    const heading = page.locator('h1').first()
-    await expect(heading).toBeVisible()
+  test('admin payouts URL redirects away from the deleted payouts UI', async ({ page }) => {
+    test.setTimeout(60_000)
+    await loginAsTeacher(page)
+    await page.goto(`${BASE}/${LOCALE}/dashboard/admin/payouts`)
+    await expect(page).not.toHaveURL(/\/payouts/)
+    await expect(page.getByTestId('payouts-page')).toHaveCount(0)
+    await expect(page.getByText('This page could not be found')).toHaveCount(0)
   })
 })
 

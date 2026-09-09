@@ -24,10 +24,12 @@ const AristotleStudySection = dynamic(
     loading: () => <Skeleton className="h-12 w-full rounded-xl" />,
   }
 )
-import { getTranslations } from 'next-intl/server'
+import { getTranslations, getFormatter } from 'next-intl/server'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { requireCourseAccess } from '@/lib/services/course-access-guard'
 import { getCheckpointLinkedExerciseIds } from '@/lib/checkpoints/load'
+import { createClient } from '@/lib/supabase/server'
+import { CourseWorkNav } from '@/components/student/course-work-nav'
 
 interface PageProps {
   params: Promise<{ courseId: string }>
@@ -37,6 +39,8 @@ export default async function CourseOverviewPage({ params }: PageProps) {
   const { courseId } = await params
   const supabase = createAdminClient()
   const t = await getTranslations('courseDetails')
+  const tWork = await getTranslations('studentCourseWork')
+  const format = await getFormatter()
   const tenantId = await getCurrentTenantId()
   const numericCourseId = parseInt(courseId)
 
@@ -47,6 +51,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
 
   // Verify access (entitlements model) before reading anything about the course
   await requireCourseAccess(supabase, userId, numericCourseId)
+  const userClient = await createClient()
 
   const { data: course, error } = await supabase
     .from('courses')
@@ -70,6 +75,8 @@ export default async function CourseOverviewPage({ params }: PageProps) {
     { data: userReview },
     { data: tutorConfig },
     { data: reviewsData },
+    { data: upcomingAssignments },
+    { data: announcements },
   ] = await Promise.all([
     course.author_id
       ? supabase.from('profiles').select('full_name, avatar_url').eq('id', course.author_id).single()
@@ -116,6 +123,21 @@ export default async function CourseOverviewPage({ params }: PageProps) {
       .eq('entity_type', 'courses')
       .eq('entity_id', numericCourseId)
       .order('created_at', { ascending: false }),
+    userClient
+      .from('assignments')
+      .select('assignment_id, title, due_at')
+      .eq('course_id', numericCourseId)
+      .eq('published', true)
+      .order('due_at', { ascending: true, nullsFirst: false })
+      .limit(5),
+    userClient
+      .from('notifications')
+      .select('id, title, content, sent_at')
+      .eq('target_course_id', numericCourseId)
+      .eq('notification_type', 'announcement')
+      .eq('status', 'sent')
+      .order('sent_at', { ascending: false })
+      .limit(5),
   ])
 
   const authorProfile = authorData
@@ -164,6 +186,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
             <IconArrowLeft className="h-4 w-4" />
             {t('backToLearning')}
           </Link>
+          <CourseWorkNav courseId={courseId} current="course" />
 
           <div className="flex flex-col gap-6 md:flex-row md:items-start lg:gap-10">
             {/* Thumbnail */}
@@ -252,6 +275,69 @@ export default async function CourseOverviewPage({ params }: PageProps) {
 
       {/* Lessons list */}
       <main className="mx-auto max-w-5xl px-4 py-8 sm:py-12 sm:px-6 lg:px-8">
+        <div className="mb-8 grid gap-6 md:grid-cols-2">
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold tracking-tight">{tWork('upcoming')}</h2>
+              <Link
+                href={`/dashboard/student/courses/${courseId}/assignments`}
+                className="text-sm font-medium text-primary hover:underline"
+              >
+                {tWork('nav.assignments')}
+              </Link>
+            </div>
+            {upcomingAssignments && upcomingAssignments.length > 0 ? (
+              <ul className="space-y-2">
+                {upcomingAssignments.map((assignment) => (
+                  <li key={assignment.assignment_id}>
+                    <Link
+                      href={`/dashboard/student/courses/${courseId}/assignments/${assignment.assignment_id}`}
+                      className="block rounded-xl border bg-muted/30 p-3 hover:border-primary/40"
+                    >
+                      <p className="font-medium">{assignment.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {assignment.due_at
+                          ? tWork('due', {
+                              date: format.dateTime(new Date(assignment.due_at), {
+                                dateStyle: 'medium',
+                                timeStyle: 'short',
+                              }),
+                            })
+                          : tWork('noDue')}
+                      </p>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">{tWork('noAssignments')}</p>
+            )}
+          </section>
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold tracking-tight">{tWork('announcements')}</h2>
+              <Link
+                href={`/dashboard/student/courses/${courseId}/calendar`}
+                className="text-sm font-medium text-primary hover:underline"
+              >
+                {tWork('nav.calendar')}
+              </Link>
+            </div>
+            {announcements && announcements.length > 0 ? (
+              <ul className="space-y-2">
+                {announcements.map((item) => (
+                  <li key={item.id} className="rounded-xl border bg-muted/30 p-3">
+                    <p className="font-medium">{item.title}</p>
+                    <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{item.content}</p>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">{tWork('noAnnouncements')}</p>
+            )}
+          </section>
+        </div>
+
         <div className="flex items-center justify-between mb-5 sm:mb-8">
           <h2 className="text-xl sm:text-2xl font-black tracking-tight">{t('curriculum')}</h2>
           <Badge variant="outline" className="font-bold border-2">

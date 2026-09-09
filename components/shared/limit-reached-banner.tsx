@@ -1,8 +1,6 @@
 'use client'
 
-import { Button } from '@/components/ui/button'
 import { IconAlertTriangle, IconX } from '@tabler/icons-react'
-import Link from 'next/link'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 
@@ -47,11 +45,6 @@ export function LimitReachedBanner({ resource, current, limit, className, cutoff
           </p>
         )}
       </div>
-      <Link href="/dashboard/admin/billing/upgrade">
-        <Button variant={isAtLimit ? 'destructive' : 'outline'} size="sm">
-          Upgrade
-        </Button>
-      </Link>
       {!isAtLimit && (
         <button
           onClick={() => setDismissed(true)}

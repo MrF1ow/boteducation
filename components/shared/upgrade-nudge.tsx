@@ -4,7 +4,6 @@ import { useTranslations } from 'next-intl'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { IconLock } from '@tabler/icons-react'
-import Link from 'next/link'
 import { FEATURE_REQUIRED_PLAN, PLAN_FEATURE_LABELS, PLAN_PRICES, type PlanFeatures } from '@/lib/plans/features'
 
 /**
@@ -51,11 +50,7 @@ export function UpgradeNudge({ feature, currentPlan, className, compact, hint }:
         <IconLock className="h-4 w-4 shrink-0" aria-hidden />
         <span>{t('upgradeToUnlock', { plan: planLabel, feature: featureName })}</span>
         {hint && <span className="text-xs">{t(hint)}</span>}
-        <Link href="/dashboard/admin/billing/upgrade">
-          <Button variant="link" size="sm" className="h-auto p-0">
-            {t('upgrade', { plan: planLabel })}
-          </Button>
-        </Link>
+        <span className="text-xs">{t('upgrade', { plan: planLabel })}</span>
       </div>
     )
   }
@@ -75,9 +70,7 @@ export function UpgradeNudge({ feature, currentPlan, className, compact, hint }:
           {hint && <p className="mt-2 text-sm text-muted-foreground">{t(hint)}</p>}
           <p className="mt-1 text-xs text-muted-foreground">{t('startingAt', { price })}</p>
         </div>
-        <Link href="/dashboard/admin/billing/upgrade">
-          <Button>{t('upgrade', { plan: planLabel })}</Button>
-        </Link>
+        <Button disabled>{t('upgrade', { plan: planLabel })}</Button>
       </CardContent>
     </Card>
   )

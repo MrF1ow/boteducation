@@ -148,13 +148,12 @@ describe('platform provider runtime status', () => {
       }),
     }) as unknown as SupabaseClient
 
-  it('does not mark Stripe ready without its platform webhook secret', () => {
-    vi.stubEnv('STRIPE_SECRET_KEY', 'sk_test_platform')
+  it('does not require Stripe secrets after the payments factory is unhooked', () => {
     vi.stubEnv('STRIPE_PLATFORM_WEBHOOK_SECRET', '')
 
     expect(getPlatformProviderRuntimeStatuses().stripe).toMatchObject({
-      configured: false,
-      ready: false,
+      configured: true,
+      ready: true,
     })
   })
 

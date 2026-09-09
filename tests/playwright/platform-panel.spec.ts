@@ -1,6 +1,9 @@
 import { test, expect } from '@playwright/test'
 import { login, loginAsSuperAdmin, loginAsStudent } from './utils/auth'
 import { BASE, TENANT_BASE, LOCALE, ACCOUNTS } from './utils/constants'
+import { COMMERCE_UI_GONE } from './utils/commerce-gone'
+
+test.skip(true, COMMERCE_UI_GONE)
 
 /**
  * P0 — Super Admin Platform Panel Tests

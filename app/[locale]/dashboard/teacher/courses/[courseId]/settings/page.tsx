@@ -10,7 +10,10 @@ import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { CourseDeleteButton } from '@/components/teacher/course-delete-button'
 import { AristotleConfig } from '@/components/teacher/aristotle-config'
 import { SequentialCompletionToggle } from '@/components/teacher/sequential-completion-toggle'
+import { ProfessorBotsCard } from '@/components/teacher/professor-bots-card'
 import { Separator } from '@/components/ui/separator'
+import { listProfessorBots } from '@/app/actions/teacher/professor-bots'
+import { listMcpTokens } from '@/app/actions/mcp-tokens'
 
 interface PageProps {
   params: Promise<{ courseId: string }>
@@ -57,8 +60,8 @@ export default async function CourseSettingsPage({ params }: PageProps) {
     )
   }
 
-  // Get categories and Aristotle config in parallel
-  const [{ data: categories }, { data: aristotleConfig }] = await Promise.all([
+  const courseIdNum = parseInt(courseId)
+  const [{ data: categories }, { data: aristotleConfig }, bots, { data: tokens }] = await Promise.all([
     supabase
       .from('course_categories')
       .select('id, name')
@@ -67,9 +70,11 @@ export default async function CourseSettingsPage({ params }: PageProps) {
     supabase
       .from('course_ai_tutors')
       .select('tutor_id, enabled, persona, teaching_approach, boundaries, model_config')
-      .eq('course_id', parseInt(courseId))
+      .eq('course_id', courseIdNum)
       .eq('tenant_id', tenantId)
       .single(),
+    listProfessorBots(courseIdNum),
+    listMcpTokens(),
   ])
 
   return (
@@ -97,22 +102,40 @@ export default async function CourseSettingsPage({ params }: PageProps) {
 
         <CourseForm
           categories={categories || []}
-          initialData={course as any}
+          initialData={{
+            course_id: course.course_id,
+            title: course.title,
+            description: course.description,
+            thumbnail_url: course.thumbnail_url,
+            category_id: course.category_id,
+            status: course.status,
+            learning_objectives: course.learning_objectives,
+            estimated_duration_minutes: course.estimated_duration_minutes,
+          }}
         />
 
         <Separator className="my-8" />
 
         {/* Sequential Completion */}
         <SequentialCompletionToggle
-          courseId={parseInt(courseId)}
+          courseId={courseIdNum}
           initialValue={course.require_sequential_completion ?? false}
         />
 
         <Separator className="my-8" />
 
-        {/* Aristotle AI Tutor */}
+        <ProfessorBotsCard
+          courseId={courseIdNum}
+          bots={bots}
+          tokens={(tokens ?? [])
+            .filter((token) => token.is_active)
+            .map((token) => ({ id: token.id, name: token.name }))}
+        />
+
+        <Separator className="my-8" />
+
         <AristotleConfig
-          courseId={parseInt(courseId)}
+          courseId={courseIdNum}
           tenantId={tenantId}
           initialConfig={aristotleConfig}
         />
@@ -125,7 +148,7 @@ export default async function CourseSettingsPage({ params }: PageProps) {
           <p className="text-sm text-muted-foreground mb-4">
             {t('dangerZoneDesc')}
           </p>
-          <CourseDeleteButton courseId={parseInt(courseId)} courseTitle={course.title} />
+          <CourseDeleteButton courseId={courseIdNum} courseTitle={course.title} />
         </div>
       </div>
     </div>

@@ -2,6 +2,9 @@ import { test, expect } from '@playwright/test'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { loginAsTenantStudent } from './utils/auth'
 import { TENANT_BASE } from './utils/constants'
+import { COMMERCE_UI_GONE } from './utils/commerce-gone'
+
+test.skip(true, COMMERCE_UI_GONE)
 
 const ALICE_ID = 'a1000000-0000-0000-0000-000000000004'
 
