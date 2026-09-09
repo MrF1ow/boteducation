@@ -15,45 +15,11 @@ test.describe('Gamification', () => {
       await loginAsStudent(page)
     })
 
-    test('store page loads with container and heading', async ({ page }) => {
+    test('store URL redirects away from the deleted store UI', async ({ page }) => {
       await page.goto(`${BASE}/en/dashboard/student/store`)
-      await expect(page.getByTestId('store-page')).toBeVisible({ timeout: 15_000 })
-      await expect(page.locator('h1').first()).toBeVisible()
-    })
-
-    test('store section renders items, empty state, or locked state', async ({ page }) => {
-      await page.goto(`${BASE}/en/dashboard/student/store`)
-      await expect(page.getByTestId('store-page')).toBeVisible({ timeout: 15_000 })
-
-      // Wait for client-side hydration and data loading
-      await page.waitForLoadState('networkidle')
-
-      // Store should show one of: items grid, empty message, or locked upgrade prompt
-      const storeItems = page.locator('[class*="grid"] button')
-      const emptyState = page.locator('text=/no items|empty|coming soon/i')
-      const lockedState = page.locator('text=/locked|upgrade/i')
-
-      const hasItems = await storeItems.first().isVisible().catch(() => false)
-      const isEmpty = await emptyState.first().isVisible().catch(() => false)
-      const isLocked = await lockedState.first().isVisible().catch(() => false)
-
-      expect(hasItems || isEmpty || isLocked).toBeTruthy()
-    })
-
-    test('store shows balance when available', async ({ page }) => {
-      await page.goto(`${BASE}/en/dashboard/student/store`)
-      await expect(page.getByTestId('store-page')).toBeVisible({ timeout: 15_000 })
-      await page.waitForLoadState('networkidle')
-
-      // If store is unlocked, a balance/coin indicator should be visible
-      const lockedState = page.locator('text=/locked|upgrade/i')
-      const isLocked = await lockedState.first().isVisible().catch(() => false)
-
-      if (!isLocked) {
-        // Look for the coin balance display or store item prices
-        const balanceOrCoins = page.locator('text=/balance|\\d+/i')
-        await expect(balanceOrCoins.first()).toBeVisible({ timeout: 10_000 })
-      }
+      await expect(page).not.toHaveURL(/\/store/)
+      await expect(page.getByTestId('store-page')).toHaveCount(0)
+      await expect(page.getByText('This page could not be found')).toHaveCount(0)
     })
   })
 
@@ -209,11 +175,11 @@ test.describe('Gamification', () => {
   })
 
   test.describe('Cross-Tenant Gamification', () => {
-    test('tenant student store page loads', async ({ page }) => {
+    test('tenant student store URL redirects away from the deleted UI', async ({ page }) => {
       await loginAsTenantStudent(page)
       await page.goto(`${TENANT_BASE}/en/dashboard/student/store`)
-      await expect(page.getByTestId('store-page')).toBeVisible({ timeout: 15_000 })
-      await expect(page.locator('h1').first()).toBeVisible()
+      await expect(page).not.toHaveURL(/\/store/)
+      await expect(page.getByTestId('store-page')).toHaveCount(0)
     })
   })
 })

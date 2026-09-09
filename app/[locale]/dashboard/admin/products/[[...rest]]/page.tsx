@@ -1,3 +1,1 @@
-export default function CommerceGonePage() {
-  return null
-}
+export { default } from '@/components/commerce-gone-page'

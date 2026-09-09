@@ -38,4 +38,25 @@ describe('commerce nav disable', () => {
     expect(analytics).not.toContain("from('transactions')")
     expect(upgradeNudge).not.toContain('/dashboard/admin/billing/upgrade')
   })
+
+  it('redirects leftover commerce URLs instead of rendering an empty 404', () => {
+    const gone = readFileSync('components/commerce-gone-page.tsx', 'utf8')
+    const layout = readFileSync('components/commerce-disabled-layout.tsx', 'utf8')
+    const nextConfig = readFileSync('next.config.ts', 'utf8')
+    expect(gone).toContain("redirect('/dashboard')")
+    expect(layout).toContain("redirect('/dashboard')")
+    expect(nextConfig).toContain('/dashboard/student/store')
+    expect(nextConfig).toContain('/dashboard/admin/payouts')
+    expect(nextConfig).toContain("destination: '/:locale/dashboard'")
+    const storePage = readFileSync('app/[locale]/dashboard/student/store/[[...rest]]/page.tsx', 'utf8')
+    const payoutsPage = readFileSync('app/[locale]/dashboard/admin/payouts/[[...rest]]/page.tsx', 'utf8')
+    expect(storePage).toContain("@/components/commerce-gone-page")
+    expect(payoutsPage).toContain("@/components/commerce-gone-page")
+  })
+
+  it('does not send cutoff banner CTAs at the deleted billing page', () => {
+    const banner = readFileSync('components/shared/access-cutoff-banner.tsx', 'utf8')
+    expect(banner).not.toContain('/dashboard/admin/billing')
+    expect(banner).toContain('/dashboard/admin/settings')
+  })
 })

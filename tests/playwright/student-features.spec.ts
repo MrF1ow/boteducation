@@ -62,10 +62,10 @@ test.describe('Student Features', () => {
       await loginAsStudent(page)
     })
 
-    test('payments page loads with title and content', async ({ page }) => {
+    test('payments URL redirects away from the deleted payments UI', async ({ page }) => {
       await page.goto(`${BASE}/en/dashboard/student/payments`)
-      await expect(page.getByTestId('payments-page')).toBeVisible()
-      await expect(page.getByTestId('payments-title')).toBeVisible()
+      await expect(page).not.toHaveURL(/\/payments/)
+      await expect(page.getByTestId('payments-page')).toHaveCount(0)
     })
   })
 
@@ -89,14 +89,12 @@ test.describe('Student Features', () => {
       await loginAsStudent(page)
     })
 
-    test('store page loads with heading and store section', async ({
+    test('store URL redirects away from the deleted store UI', async ({
       page,
     }) => {
       await page.goto(`${BASE}/en/dashboard/student/store`)
-      await expect(page.getByTestId('store-page')).toBeVisible()
-
-      // Store should have a heading (h1)
-      await expect(page.locator('h1').first()).toBeVisible()
+      await expect(page).not.toHaveURL(/\/store/)
+      await expect(page.getByTestId('store-page')).toHaveCount(0)
     })
   })
 
@@ -163,10 +161,11 @@ test.describe('Student Features', () => {
   })
 
   test.describe('Code Academy Tenant', () => {
-    test('tenant student payments page loads', async ({ page }) => {
+    test('tenant student payments URL redirects away from the deleted UI', async ({ page }) => {
       await loginAsTenantStudent(page)
       await page.goto(`${TENANT_BASE}/en/dashboard/student/payments`)
-      await expect(page.getByTestId('payments-page')).toBeVisible()
+      await expect(page).not.toHaveURL(/\/payments/)
+      await expect(page.getByTestId('payments-page')).toHaveCount(0)
     })
 
     test('tenant student progress page loads', async ({ page }) => {
