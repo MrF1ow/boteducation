@@ -1,5 +1,7 @@
-import { createClient } from '@/lib/supabase/server';
 import { mcpLimiter } from '@/lib/rate-limit';
+import { isJwt } from '@/lib/mcp/pat-jwt';
+import { resolvePatProxyHeaders } from '@/lib/mcp/pat-proxy';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
 
 const MCP_SERVER_URL = process.env.MCP_SERVER_URL || 'http://127.0.0.1:3001';
@@ -16,17 +18,17 @@ const MCP_PROXY_SECRET = process.env.MCP_PROXY_SECRET;
  *    server is Supabase's OAuth 2.1 server (hosts /authorize, /token, DCR).
  *    Consent screen is the Next.js /oauth/consent page.
  *
- * 2. **CLI API Tokens** — /cli
- *    Validates Bearer tokens via validate_mcp_api_token() RPC,
- *    then forwards to MCP server with user context headers.
+ * 2. **Professor / CLI API tokens** — Bearer PAT on `/api/mcp` and `/cli`
+ *    Validates via validate_mcp_api_token(), mints a user JWT so LmsSession
+ *    can build an RLS client, then proxies. `/cli` is an alias of `/mcp`.
+ *    X-User-* headers are not auth.
  *
  * 3. **Session (Web UI)** — / (root, no subpath)
- *    Validates Supabase session, then forwards to MCP server.
+ *    Forwards the caller's Authorization JWT to the MCP server.
  *
  * Multi-tenancy:
  * - OAuth metadata uses request Host header for per-tenant URLs
  * - MCP server reads X-Origin header for consent page redirects
- * - CLI/session handlers read x-tenant-id from proxy.ts
  */
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -92,128 +94,80 @@ async function serveAuthorizationServerMetadata(): Promise<NextResponse> {
   }
 }
 
-// ─── CLI Token Handler (/cli) ──────────────────────────────────────────────
+// ─── Professor / CLI PAT → user JWT ────────────────────────────────────────
 
-async function handleCliRequest(request: NextRequest): Promise<Response> {
+function jsonRpcError(status: number, code: number, message: string): NextResponse {
+  return NextResponse.json(
+    { jsonrpc: '2.0', error: { code, message } },
+    { status },
+  );
+}
+
+/**
+ * If Authorization is a PAT (not a JWT), validate it and return headers that
+ * replace it with a minted user JWT. JWTs pass through unchanged. Missing
+ * Bearer is not an error here — OAuth clients get WWW-Authenticate from MCP.
+ */
+async function extraHeadersForPat(
+  request: NextRequest,
+): Promise<Record<string, string> | NextResponse | null> {
+  const authHeader = request.headers.get('authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
+  const token = authHeader.slice(7).trim();
+  if (!token) return jsonRpcError(401, -32001, 'Unauthorized: Missing Authorization: Bearer <token> header');
+  if (isJwt(token)) return null;
+
+  let resolved: Awaited<ReturnType<typeof resolvePatProxyHeaders>>;
   try {
-    // 1. Extract bearer token
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { jsonrpc: '2.0', error: { code: -32001, message: 'Unauthorized: Missing Authorization: Bearer <token> header' } },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.substring(7);
-
-    // 2. Validate token via RPC
-    const supabase = await createClient();
-    const { data: tokenData, error: tokenError } = await supabase
-      .rpc('validate_mcp_api_token', { token_input: token });
-
-    if (tokenError || !tokenData || tokenData.length === 0) {
-      return NextResponse.json(
-        { jsonrpc: '2.0', error: { code: -32001, message: 'Unauthorized: Invalid, expired, or revoked API token' } },
-        { status: 401 }
-      );
-    }
-
-    const user = tokenData[0];
-    const userId = user.user_id;
-    const userRole = user.user_role;
-    const tokenId = user.token_id;
-
-    // 3. Verify role
-    if (userRole !== 'teacher' && userRole !== 'admin') {
-      return NextResponse.json(
-        { jsonrpc: '2.0', error: { code: -32002, message: `Forbidden: MCP requires teacher or admin role (current: ${userRole})` } },
-        { status: 403 }
-      );
-    }
-
-    // 4. Rate limit
-    try {
-      await mcpLimiter.check(100, userId);
-    } catch {
-      return NextResponse.json(
-        { jsonrpc: '2.0', error: { code: -32003, message: 'Rate limit exceeded (100 req/min)' } },
-        { status: 429 }
-      );
-    }
-
-    // 5. Parse body
-    let body;
-    try {
-      body = await request.json();
-    } catch {
-      return NextResponse.json(
-        { jsonrpc: '2.0', error: { code: -32700, message: 'Parse error: Invalid JSON' } },
-        { status: 400 }
-      );
-    }
-
-    if (!body.jsonrpc || !body.method || body.jsonrpc !== '2.0') {
-      return NextResponse.json(
-        { jsonrpc: '2.0', id: body.id || null, error: { code: -32600, message: 'Invalid Request: Must be JSON-RPC 2.0' } },
-        { status: 400 }
-      );
-    }
-
-    // 6. Track token usage (fire and forget)
-    const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0] ||
-                     request.headers.get('x-real-ip') || '127.0.0.1';
-    Promise.resolve().then(async () => {
-      try {
-        await supabase.rpc('update_token_last_used', { token_id_input: tokenId, ip_input: clientIp });
-      } catch { /* non-critical */ }
-    });
-
-    // 7. Forward to MCP server
-    const tenantId = request.headers.get('x-tenant-id') || '00000000-0000-0000-0000-000000000001';
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json, text/event-stream',
-      'X-User-ID': userId,
-      'X-User-Role': userRole,
-      'X-Tenant-ID': tenantId,
-    };
-    if (MCP_PROXY_SECRET) headers['X-MCP-Secret'] = MCP_PROXY_SECRET;
-
-    const mcpResponse = await fetch(`${MCP_SERVER_URL}/mcp`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body),
-    });
-
-    if (!mcpResponse.ok) {
-      let errorDetails = 'Unknown error';
-      try {
-        const errorJson = await mcpResponse.json();
-        errorDetails = errorJson.error?.message || errorJson.error || JSON.stringify(errorJson);
-      } catch {
-        errorDetails = await mcpResponse.text();
-      }
-      return NextResponse.json(
-        { jsonrpc: '2.0', id: body.id || null, error: { code: -32004, message: 'MCP server error', data: errorDetails } },
-        { status: 502 }
-      );
-    }
-
-    const result = await mcpResponse.json();
-    return NextResponse.json(result);
-  } catch (error) {
-    console.error('[MCP CLI Proxy] Error:', error);
-    return NextResponse.json(
-      { jsonrpc: '2.0', error: { code: -32603, message: 'Internal error', data: error instanceof Error ? error.message : String(error) } },
-      { status: 500 }
+    resolved = await resolvePatProxyHeaders(token);
+  } catch (err) {
+    console.error('[MCP PAT] mint failed', err);
+    return jsonRpcError(
+      500,
+      -32603,
+      'Failed to mint a user session for this token',
     );
   }
+
+  if (!resolved.ok) {
+    return jsonRpcError(resolved.status, resolved.status === 403 ? -32002 : -32001, resolved.message);
+  }
+
+  const { headers, pat } = resolved;
+
+  try {
+    await mcpLimiter.check(100, pat.userId);
+  } catch {
+    return jsonRpcError(429, -32003, 'Rate limit exceeded (100 req/min)');
+  }
+
+  const clientIp =
+    request.headers.get('x-forwarded-for')?.split(',')[0] ||
+    request.headers.get('x-real-ip') ||
+    '127.0.0.1';
+  const tokenId = pat.tokenId;
+  Promise.resolve().then(async () => {
+    try {
+      const admin = createAdminClient();
+      await admin.rpc('update_token_last_used', {
+        token_id_input: tokenId,
+        ip_input: clientIp,
+      });
+    } catch {
+      /* last-used is non-critical */
+    }
+  });
+
+  return headers;
 }
 
 // ─── Generic Proxy to MCP Server ───────────────────────────────────────────
 
-async function proxyToMcp(request: NextRequest, subpath: string): Promise<Response> {
+async function proxyToMcp(
+  request: NextRequest,
+  subpath: string,
+  extraHeaders?: Record<string, string> | null,
+): Promise<Response> {
   const targetUrl = new URL(subpath, MCP_SERVER_URL);
 
   request.nextUrl.searchParams.forEach((value, key) => {
@@ -225,6 +179,14 @@ async function proxyToMcp(request: NextRequest, subpath: string): Promise<Respon
     const value = request.headers.get(name);
     if (value) headers.set(name, value);
   }
+  // Client-supplied course scope is ignored. Only a validated PAT sets this.
+  headers.delete('x-mcp-course-ids');
+  if (extraHeaders) {
+    for (const [name, value] of Object.entries(extraHeaders)) {
+      headers.set(name, value);
+    }
+  }
+  if (MCP_PROXY_SECRET) headers.set('x-mcp-secret', MCP_PROXY_SECRET);
 
   // Pass origin info for multi-tenant consent redirects
   const origin = getOrigin(request);
@@ -300,6 +262,13 @@ async function proxyToMcp(request: NextRequest, subpath: string): Promise<Respon
 
 // ─── Route Handlers ────────────────────────────────────────────────────────
 
+async function proxyAfterPat(request: NextRequest, subpath: string): Promise<Response> {
+  const extra = await extraHeadersForPat(request);
+  if (extra instanceof NextResponse) return extra;
+  const target = subpath === '/cli' ? '/mcp' : subpath;
+  return proxyToMcp(request, target, extra);
+}
+
 export async function GET(request: NextRequest) {
   const subpath = getSubpath(request);
 
@@ -312,22 +281,15 @@ export async function GET(request: NextRequest) {
     return serveProtectedResourceMetadata(request);
   }
 
-  return proxyToMcp(request, subpath);
+  return proxyAfterPat(request, subpath);
 }
 
 export async function POST(request: NextRequest) {
-  const subpath = getSubpath(request);
-
-  // CLI token auth — handled in-process (validates API token, then proxies)
-  if (subpath === '/cli') {
-    return handleCliRequest(request);
-  }
-
-  return proxyToMcp(request, subpath);
+  return proxyAfterPat(request, getSubpath(request));
 }
 
 export async function DELETE(request: NextRequest) {
-  return proxyToMcp(request, getSubpath(request));
+  return proxyAfterPat(request, getSubpath(request));
 }
 
 export async function OPTIONS() {
