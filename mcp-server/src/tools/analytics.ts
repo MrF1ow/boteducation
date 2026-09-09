@@ -525,7 +525,7 @@ export function registerAnalyticsTools(server: LmsServer) {
     {
       name: "lms_grade_submission",
       description:
-        "Record a teacher's grade for an exam submission: set the overall score (0–100) and/or written feedback and mark it teacher-reviewed. Writes through row-level security (only the exam's owner may grade). Use after reviewing a submission with lms_get_submission_for_grading.",
+        "Record a teacher's grade for an exam submission: set the overall score (0–100) and/or written feedback and mark it teacher-reviewed. Writes through row-level security (only the exam's owner may grade). Exam submissions only — homework uses lms_grade_assignment_submission. Use after reviewing a submission with lms_get_submission_for_grading.",
       schema: z.object({
         submission_id: z.number().describe("The submission ID to grade"),
         score: z

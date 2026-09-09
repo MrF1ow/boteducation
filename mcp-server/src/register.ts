@@ -72,6 +72,26 @@ export function installToolGuards(server: LmsServer): void {
       return errorResult(msg);
     }
 
+    if (args && typeof args === "object" && args !== null && "course_id" in args) {
+      const courseId = (args as { course_id?: unknown }).course_id;
+      if (typeof courseId === "number") {
+        try {
+          LmsSession.fromContext(ctx).assertCourseInScope(courseId);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          recordToolAudit({
+            auth,
+            toolName: name,
+            args,
+            success: false,
+            errorMessage: msg,
+            durationMs: Date.now() - start,
+          });
+          return errorResult(msg);
+        }
+      }
+    }
+
     // 2. Run the real handler, brand widget results, then audit.
     let success = true;
     let errorMessage: string | undefined;

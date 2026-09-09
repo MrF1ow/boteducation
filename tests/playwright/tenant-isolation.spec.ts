@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { login, loginAsStudent, loginAsAdmin, loginAsTenantStudent } from './utils/auth'
 import { BASE, TENANT_BASE, ACCOUNTS } from './utils/constants'
+import { expectCommerceRedirect } from './utils/commerce-gone'
 
 /**
  * P0 — Tenant Isolation Tests
@@ -50,13 +51,11 @@ test.describe('Tenant Isolation', () => {
     expect(body).toContain('Code Academy')
   })
 
-  test('pricing page on code-academy shows only code-academy products', async ({
+  test('pricing URL on code-academy redirects away from the deleted UI', async ({
     page,
   }) => {
     await loginAsTenantStudent(page)
-    await page.goto(`${TENANT_BASE}/en/pricing`)
-    await expect(page.getByTestId('pricing-title')).toBeVisible()
-    await expect(page.getByText(/Code Academy Pro Monthly/i)).toBeVisible()
+    await expectCommerceRedirect(page, `${TENANT_BASE}/en/pricing`, /\/pricing/)
   })
 
   test('teacher courses list scoped to current tenant', async ({ page }) => {

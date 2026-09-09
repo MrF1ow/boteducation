@@ -10,6 +10,7 @@ import { test, expect } from '@playwright/test'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { loginAsStudent, loginAsTeacher, loginAsAdmin, loginAsTenantStudent } from './utils/auth'
 import { BASE, TENANT_BASE, LOCALE } from './utils/constants'
+import { COMMERCE_UI_GONE } from './utils/commerce-gone'
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
@@ -84,6 +85,7 @@ test.describe('Browse Page & Enrollment UI', () => {
 /*  Manual Payment Request Lifecycle                                   */
 /* ================================================================== */
 test.describe('Manual Payment Request Lifecycle', () => {
+  test.skip(true, COMMERCE_UI_GONE)
   // Seeded data IDs
   let seededProductId: number | null = null
   let seededPaymentRequestId: number | null = null
@@ -299,6 +301,7 @@ test.describe('Manual Payment Request Lifecycle', () => {
 /*  Payment Request on Tenant (Code Academy)                           */
 /* ================================================================== */
 test.describe('Payment Requests - Tenant Scoping', () => {
+  test.skip(true, COMMERCE_UI_GONE)
   test('tenant student sees payments page scoped to tenant', async ({ page }) => {
     test.setTimeout(60_000)
     await loginAsTenantStudent(page)

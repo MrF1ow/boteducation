@@ -75,9 +75,11 @@ test.describe('Teacher Course Management', () => {
 
     // ── 5. Revenue Page ───────────────────────────────────────────────────
 
-    test('teacher revenue page loads', async ({ page }) => {
+    test('teacher revenue URL redirects away from the deleted UI', async ({ page }) => {
       await page.goto(`${BASE}/en/dashboard/teacher/revenue`)
-      await expect(page.getByTestId('revenue-page')).toBeVisible()
+      await expect(page).not.toHaveURL(/\/revenue/)
+      await expect(page.getByTestId('revenue-page')).toHaveCount(0)
+      await expect(page.getByText('This page could not be found')).toHaveCount(0)
     })
 
     // ── 6. Certificate Templates Page ─────────────────────────────────────
@@ -111,9 +113,10 @@ test.describe('Teacher Course Management', () => {
       await expect(page.getByLabel(/title/i)).toBeVisible()
       await expect(page.getByLabel(/description/i)).toBeVisible()
 
-      // Revenue
+      // Revenue URLs redirect; the storefront is gone
       await page.goto(`${BASE}/en/dashboard/teacher/revenue`)
-      await expect(page.getByTestId('revenue-page')).toBeVisible()
+      await expect(page).not.toHaveURL(/\/revenue/)
+      await expect(page.getByTestId('revenue-page')).toHaveCount(0)
 
       // Templates
       await page.goto(`${BASE}/en/dashboard/teacher/templates`)

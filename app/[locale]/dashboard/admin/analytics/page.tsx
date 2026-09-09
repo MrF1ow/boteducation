@@ -2,7 +2,6 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { Button } from '@/components/ui/button'
-import { RevenueChart } from '@/components/admin/revenue-chart'
 import { UserGrowthChart } from '@/components/admin/user-growth-chart'
 import { EngagementMetrics } from '@/components/admin/engagement-metrics'
 import { CoursePopularityChart } from '@/components/admin/course-popularity-chart'
@@ -15,7 +14,27 @@ import { UpgradeNudge } from '@/components/shared/upgrade-nudge'
 import { format } from 'date-fns'
 import { es, enUS } from 'date-fns/locale'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
-import { netOfRefunds } from '@/lib/payments/payouts-owed'
+
+type CountEmbed = { count?: number }
+type CourseProgressEmbed = {
+  course_id: number
+  lessons?: CountEmbed[]
+}
+type EnrollmentProgressRow = {
+  user_id: string
+  course: CourseProgressEmbed | CourseProgressEmbed[] | null
+}
+type CoursePopularityRow = {
+  course_id: number
+  title: string
+  enrollments?: CountEmbed[]
+  lessons?: Array<{ lesson_id: number }>
+}
+
+function asCourse(value: EnrollmentProgressRow['course']): CourseProgressEmbed | null {
+  if (!value) return null
+  return Array.isArray(value) ? value[0] ?? null : value
+}
 
 interface SearchParams {
   period?: string
@@ -47,9 +66,8 @@ export default async function AnalyticsPage({
 
   const tenantId = await getCurrentTenantId()
 
-  // Analytics tiers (#662, PRODUCT.md "Plan tiers"): none on Free → nudge;
-  // basic on Starter → growth, engagement and course popularity; advanced on
-  // Pro+ adds revenue reporting and CSV export.
+  // Analytics tiers (#662): none on Free → nudge; basic+ shows growth,
+  // engagement and course popularity. Revenue charts are gone with commerce.
   const analyticsTier = await getAnalyticsTier(tenantId)
   if (analyticsTier === 'none') {
     return (
@@ -78,7 +96,6 @@ export default async function AnalyticsPage({
 
   // Parallelize all independent data queries
   const [
-    { data: transactions, error: transactionsError },
     { data: tenantUserIds },
     { count: totalUsers },
     { count: totalEnrollments },
@@ -88,13 +105,6 @@ export default async function AnalyticsPage({
     { data: enrollmentsWithProgress },
     { data: coursesWithEnrollments },
   ] = await Promise.all([
-    // The column is `transaction_date`; `transactions` has no `created_at`.
-    // Asking for one made PostgREST reject the whole request, and because the
-    // error was never read this page rendered $0.00 revenue and a count of 0 on
-    // every load, for every school, permanently and silently (#547 §2).
-    supabase.from('transactions').select('amount, refunded_amount, status, transaction_date')
-      .eq('tenant_id', tenantId).eq('status', 'successful')
-      .gte('transaction_date', startDate.toISOString()).order('transaction_date', { ascending: true }),
     supabase.from('tenant_users').select('user_id, created_at')
       .eq('tenant_id', tenantId).eq('status', 'active')
       .gte('created_at', startDate.toISOString()).order('created_at', { ascending: true }),
@@ -110,6 +120,7 @@ export default async function AnalyticsPage({
       .eq('tenant_id', tenantId),
     supabase.from('enrollments').select(`
       enrollment_id,
+      user_id,
       course:courses (
         course_id,
         lessons:lessons (count)
@@ -124,37 +135,6 @@ export default async function AnalyticsPage({
       )
     `).eq('tenant_id', tenantId).eq('status', 'published'),
   ])
-
-  // Fail loudly rather than rendering zeros. Every revenue figure below is a sum
-  // over `transactions`, so a rejected query is indistinguishable from a school
-  // that has never sold anything — which is exactly how the `created_at` bug
-  // above stayed invisible (#547 §2).
-  if (transactionsError) {
-    throw new Error(`Analytics revenue query failed: ${transactionsError.message}`)
-  }
-
-  // Group revenue by date
-  const revenueByDate = new Map<string, { revenue: number; transactions: number }>()
-  let totalRevenue = 0
-
-  transactions?.forEach((t) => {
-    const date = format(new Date(t.transaction_date), 'MMM d', { locale: dateLocale })
-    const existing = revenueByDate.get(date) || { revenue: 0, transactions: 0 }
-    // Net of any refunded slice (#547) — a partially refunded sale is still
-    // `successful`, so counting it in full would overstate revenue.
-    const kept = netOfRefunds(t.amount || 0, t.refunded_amount)
-    revenueByDate.set(date, {
-      revenue: existing.revenue + kept,
-      transactions: existing.transactions + 1,
-    })
-    totalRevenue += kept
-  })
-
-  const revenueData = Array.from(revenueByDate.entries()).map(([date, data]) => ({
-    date,
-    revenue: data.revenue,
-    transactions: data.transactions,
-  }))
 
   // Calculate user growth data
   const profiles = tenantUserIds?.map((tu) => ({ created_at: tu.created_at })) || []
@@ -184,8 +164,8 @@ export default async function AnalyticsPage({
   let validEnrollments = 0
 
   if (enrollmentsWithProgress) {
-    for (const enrollment of enrollmentsWithProgress) {
-      const course = enrollment.course as any
+    for (const enrollment of enrollmentsWithProgress as EnrollmentProgressRow[]) {
+      const course = asCourse(enrollment.course)
       if (!course?.lessons?.[0]?.count) continue
 
       const totalLessons = course.lessons[0].count
@@ -194,7 +174,7 @@ export default async function AnalyticsPage({
       const { count: completedLessons } = await supabase
         .from('lesson_completions')
         .select('*', { count: 'exact', head: true })
-        .eq('user_id', (enrollment as any).user_id)
+        .eq('user_id', enrollment.user_id)
         .in(
           'lesson_id',
           (
@@ -215,9 +195,9 @@ export default async function AnalyticsPage({
     validEnrollments > 0 ? (totalCompletionRate / validEnrollments) * 100 : 0
 
   const coursePopularityData = await Promise.all(
-    (coursesWithEnrollments || []).map(async (course) => {
-      const enrollmentCount = (course.enrollments as any[])?.[0]?.count || 0
-      const lessonIds = (course.lessons as any[])?.map((l) => l.lesson_id) || []
+    (coursesWithEnrollments as CoursePopularityRow[] | null || []).map(async (course) => {
+      const enrollmentCount = course.enrollments?.[0]?.count || 0
+      const lessonIds = course.lessons?.map((l) => l.lesson_id) || []
 
       if (lessonIds.length === 0) {
         return {
@@ -293,11 +273,9 @@ export default async function AnalyticsPage({
           {advancedAnalytics && (
             <ExportButton
               data={{
-                revenueData,
                 userGrowthData,
                 coursePopularityData,
                 metrics: {
-                  totalRevenue,
                   totalUsers: totalUsers || 0,
                   totalEnrollments: totalEnrollments || 0,
                   activeStudents,
@@ -318,16 +296,6 @@ export default async function AnalyticsPage({
           </div>
         </div>
       </div>
-
-      {advancedAnalytics ? (
-        <RevenueChart
-          data={revenueData}
-          totalRevenue={totalRevenue}
-          period={periodLabel}
-        />
-      ) : (
-        <UpgradeNudge feature="analytics" hint="analyticsBasic" compact data-testid="analytics-basic-nudge" />
-      )}
 
       <UserGrowthChart
         data={userGrowthData}

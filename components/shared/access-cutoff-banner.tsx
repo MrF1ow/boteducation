@@ -58,7 +58,7 @@ export async function AccessCutoffBanner() {
       </p>
 
       <Link
-        href="/dashboard/admin/billing"
+        href="/dashboard/admin/settings"
         className="shrink-0 rounded-md border border-current px-3 py-1.5 text-sm font-medium hover:opacity-80"
       >
         {notice.active ? t('restoreAccess') : t('manageBilling')}

@@ -40,6 +40,9 @@ import {
   tenantBase,
   type QaTenant,
 } from './utils/plan-gate-fixtures'
+import { COMMERCE_UI_GONE } from './utils/commerce-gone'
+
+test.skip(true, COMMERCE_UI_GONE)
 
 const QA: QaTenant = {
   id: '00000000-0000-0000-0000-000000000300',
