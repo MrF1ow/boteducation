@@ -35,6 +35,7 @@ Keep.
 - Courses, lessons, exercises, exams, enrollments.
 - `mcp-server/` minus landing-page tools.
 - `mcp_api_tokens` and `mcp_audit_log`.
+- `proxy.ts` and `i18n.ts`.
 
 ## Schema changes
 
@@ -59,7 +60,10 @@ After the delete step, a follow-up migration may drop unused tables. That is opt
 
 ## Risks
 
-- Enrollment currently has a check that a row is tied to a product or a subscription (`valid_enrollment` in `supabase/migrations/20260126190500_lms_complete.sql`). Free roster enrollments may already use a later migration. Confirm before deleting product rows from seed.
-- Multi-tenant subdomain code is how local login works (`lvh.me`). Do not rip `tenants` in this PR. One school per deploy still uses one tenant row.
+- Enrollment billing columns were already dropped in `supabase/migrations/20260516150000_phase3_drop_legacy_enrollment_columns.sql`. Roster rows no longer need a product. Do not reintroduce that check.
+- Multi-tenant subdomain code is how local login works (`lvh.me`, `proxy.ts`, `lib/supabase/tenant.ts`). Do not rip `tenants` or `proxy.ts` in this PR. One school per deploy still uses one tenant row.
+- i18n (`i18n.ts`, `messages/`, `next-intl`) sits in the request path. Lock to English if you want. Do not delete it.
+- Student home and profile import `WeeklyLeague` and other `components/gamification/*`. Hide nav first. Delete those components only in the same commit that edits `app/[locale]/dashboard/student/page.tsx` and `profile/page.tsx`.
+- Payment rails throw only when selected (`lib/payments/index.ts`). Missing modules still fail `tsc` while `index.ts` re-exports them. Unhook the factory before deleting provider files.
 - MCP landing-page tools will break Grok if they remain advertised after files are deleted. Remove them from `mcp-server/index.ts` in the same delete commit.
 - Seeded `creator@codeacademy.com` on a second subdomain is leftover SaaS. Leave it until the single-school PR. Do not make it a blocker for disable.

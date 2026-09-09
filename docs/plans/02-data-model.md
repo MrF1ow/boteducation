@@ -4,7 +4,7 @@ This is PR-02 in `docs/plans/boteducation-program.md`. It lands before MCP and U
 
 ## Goal
 
-Make assignments, submissions, grades, course announcements, professor-bot bindings, and a calendar source first-class in Postgres with RLS. Reuse the empty `assignments`, `submissions`, and `grades` tables. Do not invent a second assignment schema. Keep `teacher` in `app_role` and `tenant_users.role`. Treat professor as the product name for `teacher`.
+Make assignments, submissions, homework grades, course announcements, professor-bot bindings, and a calendar source first-class in Postgres with RLS. Reuse empty `assignments` and `submissions`. Retarget `grades.submission_id` off `exam_submissions` before using that table for homework, or add `assignment_grades`. Keep `teacher` in `app_role` and `tenant_users.role`. Treat professor as the product name for `teacher`.
 
 ## Domain shape
 
@@ -32,7 +32,7 @@ Add columns. Keep `assignment_id` and `course_id`.
 - `created_by uuid references auth.users(id)`
 - `published boolean not null default true` (the assignment itself, not the grade)
 
-Student SELECT when enrolled in the course. Staff ALL via existing `is_staff_of(course.tenant_id)` pattern.
+Replace `Authenticated users can view assignments` (`USING (true)` in `supabase/migrations/20260313152153_rls_remaining_tables.sql`). Student SELECT only when enrolled (or entitled) in that `course_id`. Staff ALL via `is_staff_of(course.tenant_id)`. The table has no `tenant_id`. Gate through `courses`, same as the later staff policy in `20260830140000_rls_tenant_scope_sweep.sql`.
 
 ### Extend `submissions`
 
@@ -44,7 +44,11 @@ Student SELECT when enrolled in the course. Staff ALL via existing `is_staff_of(
 
 Student INSERT/UPDATE own row before lock. Staff SELECT. No student UPDATE after `submitted` unless late policy allows resubmit.
 
-### Extend `grades`
+### Homework grades (do not reuse `grades` as-is)
+
+`lib/database.types.ts` shows `grades.submission_id` pointing at `exam_submissions`, not at homework `submissions`. The constraint is `grades_submission_id_fkey` in `supabase/migrations/20260126190500_lms_complete.sql`. Exam scores already live on `exam_submissions` and `exam_scores`. Zero app callers write `grades`.
+
+In the same additive migration, if `grades` is empty (expected), drop `grades_submission_id_fkey` and retarget it to `public.submissions(submission_id)`. Then add the homework columns.
 
 - `score numeric` (keep `grade` as generated or backfill; pick one name in code and write only that column)
 - `feedback text` (already present)
@@ -52,7 +56,11 @@ Student INSERT/UPDATE own row before lock. Staff SELECT. No student UPDATE after
 - `published boolean not null default false`
 - `source text` check in `human`, `ai`
 
-Student SELECT only when `published`. Staff ALL. Service-role MCP still uses the user-scoped client so RLS applies. Professor tokens must not use the service role for these writes.
+Replace today's student SELECT (`auth.uid() = student_id` with no publish gate, `supabase/migrations/20260313152153_rls_remaining_tables.sql`) with student SELECT only when `published`. Staff ALL via `is_staff_of` on the course tenant, not `get_tenant_role()` with no tenant predicate.
+
+If the FK retarget is blocked by leftover exam rows, create `assignment_grades` instead and leave `grades` untouched until PR-01. Do not insert homework scores into a table that still FKs to `exam_submissions`.
+
+Service-role MCP still uses the user-scoped client so RLS applies. Professor tokens must not use the service role for these writes.
 
 ### Course announcements
 
@@ -107,3 +115,5 @@ Create view `course_calendar_items` with columns `course_id`, `item_kind` (`assi
 - `grades.grade` CHECK 0 to 100 vs `max_score` other than 100. Replace the check with `0 <= score <= assignment.max_score` or store percent. Pick one in the migration and test it.
 - Token `course_ids` without RLS would be security theater. Tools must use the user client. Scope is an extra deny, not a bypass.
 - `notifications` reuse may send email. MCP announcements should stay in-app until email is an explicit setting.
+- `grades` currently FKs to exams. A homework insert would fail or attach to the wrong row until that constraint is retargeted.
+- `assignments` SELECT `USING (true)` leaks every school's homework to any logged-in user until replaced.

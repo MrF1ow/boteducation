@@ -8,17 +8,20 @@ A Grok bot with a bearer token can run the school through tools. The operator pa
 
 ## Auth at the boundary
 
-Today Bearer tokens work only on `/api/mcp/cli` (`app/api/mcp/[[...path]]/route.ts` `handleCliRequest`). Grok config wants `/api/mcp`. Accept the same Bearer token on the main MCP path. Keep `/cli` as an alias.
+Today Bearer tokens work only on `/api/mcp/cli` (`handleCliRequest` in `app/api/mcp/[[...path]]/route.ts`). Grok config wants `/api/mcp`. Accept the same Bearer token on the main MCP path. Keep `/cli` as an alias.
 
-`validate_mcp_api_token` must return `user_id`, `user_role`, `token_id`, `course_ids`. Build a user-scoped Supabase client from that user, not the service role, for tool queries. Service role stays limited to `recordToolAudit`.
+`handleCliRequest` validates the PAT, then forwards `X-User-ID`, `X-User-Role`, and `X-Tenant-ID` to the MCP process. It does not forward a user JWT. `LmsSession.fromContext` in `mcp-server/src/session.ts` reads only OAuth/JWT via `resolveMcpAuth`. Those CLI headers are not auth. A Grok PAT today cannot build an RLS client.
 
-If `course_ids` is non-empty, reject tool calls whose `course_id` (or parent course) is outside that set before the handler runs. Put this in `installToolGuards` (`mcp-server/src/register.ts`) so every tool shares one check.
+After `validate_mcp_api_token`, mint (or look up) a user access token for that `user_id` whose claims include `tenant_id` and `tenant_role`, and send it as `Authorization` to the MCP server. Build the tool client with `createUserClient(accessToken)`. Do not trust `X-User-ID` as the only gate. Service role stays limited to `recordToolAudit`.
 
-`mcp_audit_log.user_role` currently allows `teacher` and `admin`. Include `professor` if you persist that string, or write `teacher` when the product role is professor. Keep the check constraint in sync.
+`validate_mcp_api_token` must also return `course_ids`. If `course_ids` is non-empty, reject tool calls whose `course_id` (or parent course) is outside that set before the handler runs. Put this in `installToolGuards` (`mcp-server/src/register.ts`) so every tool shares one check.
+
+`mcp_audit_log.user_role` already allows `student` (`supabase/migrations/20260713130000_widen_mcp_audit_user_role_check.sql`). Persist `teacher` when the product role is professor, or widen the check if you store `professor`. Demo tools skip audit. Do not copy that.
 
 ## Files to touch
 
-- `app/api/mcp/[[...path]]/route.ts`. Bearer on `/api/mcp`.
+- `app/api/mcp/[[...path]]/route.ts`. Bearer on `/api/mcp`. Forward a user JWT, not only `X-User-*` headers.
+- `mcp-server/src/session.ts`. Keep `resolveMcpAuth` JWT-only unless a second proven auth shape is required.
 - `supabase/migrations/` only if the check constraint on `mcp_audit_log.user_role` still blocks professor.
 - `mcp-server/src/tools/` new module `assignments.ts` (or split gradebook). Register it in `mcp-server/index.ts`.
 - `mcp-server/src/tools/analytics.ts`. Keep exam `lms_grade_submission`. Do not overload it for assignments. Add `lms_grade_assignment_submission` with a clearer name.
@@ -75,6 +78,8 @@ Pure helper, one function, used by grade tools.
 ## Risks
 
 - Dual `/api/mcp` vs `/api/mcp/cli` will confuse operators if both behave differently. Make them identical for Bearer.
+- PAT forwarding without a user JWT is the current Grok path. Tools will throw `Authentication required` until PR-03 mints a user JWT. Prove this with a PAT `lms_get_course` call in live lane 2.
 - `lms_grade_submission` already means exam. Renaming it would break existing clients. Add assignment tools with new names.
 - Widgets in mcp-use are optional. Professor tools should return JSON text first. Widgets can wait.
 - Plan-limit helpers in course create (`plan-limits.ts`) must not block a self-hosted school. If they throw, catch and ignore when no paid plan is configured.
+- Shared role gate is `isToolAllowedForRole` in `mcp-server/src/tool-policy.ts`. Map professor to the teacher allow-list. Do not give professor admin-only tools (`lms_delete_*`, `lms_archive_course`, landing-page tools).

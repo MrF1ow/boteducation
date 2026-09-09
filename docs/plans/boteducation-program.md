@@ -453,8 +453,8 @@ Settled by clone and commands in this session.
 - `npm run typecheck` exits 0. Evidence is the tsc run in this session.
 - Docker is missing. `command -v docker` failed. Local `supabase start` is blocked.
 - `gh` has no token. The GitHub fork URL does not exist yet.
-- `assignments`, `submissions`, and `grades` exist in `supabase/migrations/20260126190500_lms_complete.sql` and in `lib/database.types.ts`. No app `.from('assignments')` callers. RLS already in `20260830140000_rls_tenant_scope_sweep.sql`.
-- MCP already has `lms_get_course`, `lms_create_lesson`, `lms_create_exam`, exam `lms_grade_submission`, and roster-like `lms_list_enrollments`.
+- `assignments`, `submissions`, and `grades` exist in `supabase/migrations/20260126190500_lms_complete.sql` and in `lib/database.types.ts`. No app `.from('assignments')` callers. `grades_submission_id_fkey` points at `exam_submissions`. Assignment SELECT is `USING (true)`.
+- MCP already has `lms_get_course`, `lms_create_lesson`, `lms_create_exam`, exam `lms_grade_submission`, and roster-like `lms_list_enrollments`. About 91 live tools. PAT CLI does not mint a user JWT.
 
 Unproven until operator go.
 
@@ -463,7 +463,7 @@ Unproven until operator go.
 
 ## Appendix B. Alternatives rejected
 
-Replace `assignments` with new tables. Rejected because types, FKs, and RLS already use those names. Extend columns instead.
+Replace `assignments` with new tables. Rejected because types, FKs, and staff RLS already use those names. Extend `assignments` and `submissions`. Retarget `grades` off `exam_submissions` instead of pretending that FK is homework.
 
 Rename `teacher` to `professor` in Postgres in PR-02. Rejected because JWT hooks, RLS, and MCP guards all read `teacher`. Alias at the product boundary.
 
@@ -481,11 +481,14 @@ A second protocol beside MCP. Rejected. Extend `mcp-server/src/tools`.
 - No Docker. Live lanes that need `db:reset` must run on VMs with Docker. Owner watches boot recipe failures.
 - `control-ui` is not in this repo. Lanes fall back to Playwright. Named in the boot recipe.
 - `pstack/` is not in this repo. `git show origin/main:pstack/...` will fail until those skills are vendored or the owner reads them from the Cursor plugin cache. Owner watches the arm step.
-- Enrollment CHECK tying rows to products may block free roster inserts. Lands in PR-02 or PR-01. Owner watches insert errors.
+- Enrollment product columns were already dropped. Owner still watches free roster inserts in PR-02.
 - `lms_grade_submission` is an exam tool. Do not reuse the name for assignments. PR-03.
 - Service-role audit vs user-scoped writes. Professor tokens must not use service role for assignment writes. PR-03.
+- PAT `/cli` forwards `X-User-*` and no user JWT. `LmsSession` will reject Grok until PR-03 mints a user token. Owner watches PAT `lms_get_course`.
 - `createAdminClient` on the current student course page. PR-04 must not copy it for submits.
 - Forking the wrong GitHub user. Operator choice before `gh repo fork`.
+- Student home imports weekly league and gamification. PR-01 must edit those pages in the same commit as the component delete.
+- i18n and `proxy.ts` tenancy are request-path. PR-01 does not delete them.
 
 ## Appendix D. Links and reading list
 

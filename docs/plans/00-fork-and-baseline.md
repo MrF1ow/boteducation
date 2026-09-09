@@ -67,7 +67,9 @@ None.
 
 Tools live under `mcp-server/src/tools/`. Registration is `mcp-server/index.ts`. Guards and audit are `mcp-server/src/register.ts` (`installToolGuards`) and `mcp-server/src/audit.ts` (`recordToolAudit` into `mcp_audit_log`).
 
-Public URL today is a Next.js proxy at `app/api/mcp/[[...path]]/route.ts`. Bearer CLI tokens hit `/api/mcp/cli` and `validate_mcp_api_token`. Session and OAuth use other subpaths. BotEducation wants Grok to paste `https://<domain>/api/mcp`. That path does not yet accept a professor bearer token.
+Public URL today is a Next.js proxy at `app/api/mcp/[[...path]]/route.ts`. Bearer CLI tokens hit `/api/mcp/cli` and `validate_mcp_api_token`. The handler forwards `X-User-*` headers and does not mint a user JWT. `mcp-server/src/session.ts` `resolveMcpAuth` reads JWT only. Session and OAuth use other subpaths. BotEducation wants Grok to paste `https://<domain>/api/mcp`. That path does not yet accept a professor bearer token that can call tools under RLS.
+
+Role gate is `isToolAllowedForRole` in `mcp-server/src/tool-policy.ts`. About 91 live tools plus demo widgets. Teacher is denied admin-only deletes, archive, school stats, and landing-page tools.
 
 Existing tools that already match professor work, with today's names.
 
@@ -103,11 +105,11 @@ Tables exist in `supabase/migrations/20260126190500_lms_complete.sql`.
 
 - `assignments` (`assignment_id`, `course_id`, `title`, `description`, `due_date`, `created_at`)
 - `submissions` (`submission_id`, `assignment_id`, `student_id`, `submission_date`, `file_path`)
-- `grades` (`grade_id`, `submission_id`, `student_id`, `course_id`, `grade`, `feedback`, `graded_at`, score 0 to 100)
+- `grades` (`grade_id`, `submission_id`, `student_id`, `course_id`, `grade`, `feedback`, `graded_at`, score 0 to 100). `grades_submission_id_fkey` points at `exam_submissions`, not homework `submissions`.
 
-Generated types exist in `lib/database.types.ts`. No app `.from('assignments')` / `.from('submissions')` / `.from('grades')` call was found. RLS already exists (`supabase/migrations/20260830140000_rls_tenant_scope_sweep.sql`) and the migration comments call this a legacy empty surface.
+Generated types exist in `lib/database.types.ts`. No app `.from('assignments')` / `.from('submissions')` / `.from('grades')` call was found. Staff RLS later uses `is_staff_of`. Assignment SELECT is still `USING (true)` from `20260313152153_rls_remaining_tables.sql`.
 
-Revive and extend these tables in PR-02. Do not create a parallel assignment schema.
+Revive `assignments` and `submissions`. Retarget or replace `grades` in PR-02. Do not write homework scores through the exam FK.
 
 ### Announcements and calendar
 
