@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   allowsStudentResubmit,
   applyLatePenalty,
+  decideSubmissionWrite,
   parseLatePolicy,
   submissionStatus,
 } from '@/lib/assignments/late-policy'
@@ -28,6 +29,30 @@ describe('parseLatePolicy', () => {
     expect(parseLatePolicy({ kind: 'maybe' })).toEqual({ kind: 'reject' })
     expect(parseLatePolicy(null)).toEqual({ kind: 'reject' })
     expect(parseLatePolicy({ kind: 'penalize' })).toEqual({ kind: 'reject' })
+  })
+})
+
+describe('decideSubmissionWrite', () => {
+  const due = '2026-09-01T00:00:00.000Z'
+  const late = new Date('2026-09-02T00:00:00.000Z')
+  const onTime = new Date('2026-08-31T23:00:00.000Z')
+
+  it('refuses a first submit after due when kind is reject', () => {
+    expect(
+      decideSubmissionWrite(due, { kind: 'reject' }, late, null),
+    ).toEqual({ ok: false, reason: 'late_rejected' })
+  })
+
+  it('accepts a first submit before due', () => {
+    expect(
+      decideSubmissionWrite(due, { kind: 'reject' }, onTime, null),
+    ).toEqual({ ok: true, status: 'submitted' })
+  })
+
+  it('locks a second submit when kind is reject', () => {
+    expect(
+      decideSubmissionWrite(due, { kind: 'reject' }, onTime, 'submitted'),
+    ).toEqual({ ok: false, reason: 'locked' })
   })
 })
 

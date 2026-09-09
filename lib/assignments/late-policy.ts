@@ -73,6 +73,26 @@ export function submissionStatus(
   }
 }
 
+export function decideSubmissionWrite(
+  dueAt: string | null,
+  policy: LatePolicy,
+  at: Date,
+  existingStatus: string | null,
+): { ok: true; status: 'submitted' | 'late' } | { ok: false; reason: 'late_rejected' | 'locked' } {
+  const status = submissionStatus(dueAt, at, policy)
+  if (status === 'rejected') {
+    return { ok: false, reason: 'late_rejected' }
+  }
+  if (
+    existingStatus !== null &&
+    existingStatus !== 'draft' &&
+    !allowsStudentResubmit(policy, at)
+  ) {
+    return { ok: false, reason: 'locked' }
+  }
+  return { ok: true, status }
+}
+
 export function applyLatePenalty(
   score: number,
   policy: LatePolicy,
