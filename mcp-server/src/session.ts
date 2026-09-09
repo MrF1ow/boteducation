@@ -1,5 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createUserClient } from "./supabase.js";
+import {
+  isCourseInScope,
+  parseCourseIdsHeader,
+} from "./assignment-policy.js";
 
 /**
  * The auth facts every guard and handler needs, normalised across the two
@@ -58,6 +62,51 @@ export function resolveMcpAuth(ctx: unknown): ResolvedAuth | undefined {
   return undefined;
 }
 
+function headerValue(raw: unknown, name: string): string | null {
+  if (!raw || typeof raw !== "object") return null;
+  const rec = raw as {
+    header?: (n: string) => string | undefined;
+    get?: (n: string) => string | null;
+    raw?: { headers?: Headers };
+    headers?: Headers | Record<string, string>;
+  };
+  if (typeof rec.header === "function") {
+    const value = rec.header(name);
+    if (value) return value;
+  }
+  if (typeof rec.get === "function") {
+    const value = rec.get(name);
+    if (value) return value;
+  }
+  if (rec.raw?.headers && typeof rec.raw.headers.get === "function") {
+    const value = rec.raw.headers.get(name);
+    if (value) return value;
+  }
+  const nested = rec.headers;
+  if (nested && typeof (nested as Headers).get === "function") {
+    return (nested as Headers).get(name);
+  }
+  if (nested && typeof nested === "object") {
+    const map = nested as Record<string, string>;
+    return map[name] ?? map[name.toLowerCase()] ?? null;
+  }
+  return null;
+}
+
+/** Read an HTTP header from mcp-use's Hono-shaped RequestContext. */
+export function incomingHeader(ctx: unknown, name: string): string | null {
+  const bag = ctx as {
+    request?: unknown;
+    req?: unknown;
+    headers?: unknown;
+  };
+  return (
+    headerValue(bag.request, name) ??
+    headerValue(bag.req, name) ??
+    headerValue(bag, name)
+  );
+}
+
 /** Read the caller's tenant role from the verified JWT claims. */
 export function roleOfAuth(auth: ResolvedAuth | undefined): string | undefined {
   const payload = auth?.payload;
@@ -82,7 +131,8 @@ export class LmsSession {
     private readonly client: SupabaseClient,
     private readonly userId: string,
     private readonly tenantId: string,
-    private readonly tenantRole: string
+    private readonly tenantRole: string,
+    private readonly courseIds: number[] | null
   ) {}
 
   /**
@@ -118,11 +168,20 @@ export class LmsSession {
       );
     }
 
+    const rawCourseIds = payload.course_ids;
+    const fromClaim = Array.isArray(rawCourseIds)
+      ? rawCourseIds.filter((n): n is number => typeof n === "number")
+      : null;
+    const fromHeader = parseCourseIdsHeader(incomingHeader(ctx, "x-mcp-course-ids"));
+    const courseIds =
+      fromClaim && fromClaim.length > 0 ? fromClaim : fromHeader;
+
     return new LmsSession(
       createUserClient(auth.accessToken),
       auth.userId,
       tenantId,
-      tenantRole
+      tenantRole,
+      courseIds && courseIds.length > 0 ? courseIds : null
     );
   }
 
@@ -144,6 +203,19 @@ export class LmsSession {
 
   getTenantId(): string {
     return this.tenantId;
+  }
+
+  getCourseIds(): number[] | null {
+    return this.courseIds;
+  }
+
+  assertCourseInScope(courseId: number): void {
+    if (!isCourseInScope(this.courseIds, courseId)) {
+      const allowed = this.courseIds ?? [];
+      throw new Error(
+        `Access denied: this token is scoped to courses [${allowed.join(", ")}], not course ${courseId}.`
+      );
+    }
   }
 
   // --- Student access guard --------------------------------------------------
