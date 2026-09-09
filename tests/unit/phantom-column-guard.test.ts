@@ -247,9 +247,7 @@ describe('refund-aware money sums (#547 §1)', () => {
     expect(offenders).toEqual([])
   })
 
-  it('is not vacuous — it recognises the totals it is meant to police', () => {
-    // If the regex stops matching, the test above passes forever on an empty
-    // set. Pin that the known money-summing readers are actually being seen.
+  it('commerce screens no longer sum transactions.amount', () => {
     const seen: string[] = []
     for (const root of ROOTS) {
       for (const file of sourceFiles(root)) {
@@ -258,6 +256,6 @@ describe('refund-aware money sums (#547 §1)', () => {
         if (SUMS_AMOUNT.test(source)) seen.push(file)
       }
     }
-    expect(seen.length).toBeGreaterThanOrEqual(2)
+    expect(seen).toEqual([])
   })
 })

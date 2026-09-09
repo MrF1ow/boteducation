@@ -1,11 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
-import { IconAlertTriangle, IconArrowRight } from '@tabler/icons-react'
+import { IconAlertTriangle } from '@tabler/icons-react'
 import { saveProductCreationWizard } from '@/app/actions/admin/products'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -24,9 +23,8 @@ import {
   FieldLabel,
 } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { cn } from '@/lib/utils'
-import type { PricingMode, SaveIntent } from '@/lib/admin/product-creation/types'
+import type { SaveIntent } from '@/lib/admin/product-creation/types'
 
 export interface CourseLimitInfo {
   canCreate: boolean
@@ -51,14 +49,9 @@ export function QuickProductCreate({ limitInfo, className }: QuickProductCreateP
   const t = useTranslations('dashboard.admin.products.new.quick')
   const router = useRouter()
   const [title, setTitle] = useState('')
-  const [pricingMode, setPricingMode] = useState<PricingMode>('free')
-  const [price, setPrice] = useState('')
   const [saving, setSaving] = useState<SaveIntent | null>(null)
 
-  const priceValue = Number.parseFloat(price)
-  const canPublish =
-    title.trim().length > 0 &&
-    (pricingMode === 'free' || (Number.isFinite(priceValue) && priceValue > 0))
+  const canPublish = title.trim().length > 0
 
   const handleSave = async (intent: SaveIntent) => {
     if (saving) return
@@ -73,15 +66,7 @@ export function QuickProductCreate({ limitInfo, className }: QuickProductCreateP
           thumbnailUrl: '',
           categoryId: null,
         },
-        pricing:
-          pricingMode === 'free'
-            ? { mode: 'free' }
-            : {
-                mode: 'paid',
-                price: priceValue,
-                currency: 'usd',
-                paymentProvider: 'manual',
-              },
+        pricing: { mode: 'free' },
         postRegistrationSteps: [],
       })
 
@@ -116,10 +101,7 @@ export function QuickProductCreate({ limitInfo, className }: QuickProductCreateP
               count: limitInfo.currentCount,
               limit: limitInfo.limit,
               plan: limitInfo.plan,
-            })}{' '}
-            <Link href="/dashboard/admin/billing" className="font-medium underline">
-              {t('upgradeCta')}
-            </Link>
+            })}
           </AlertDescription>
         </Alert>
       ) : limitInfo.approaching ? (
@@ -154,57 +136,6 @@ export function QuickProductCreate({ limitInfo, className }: QuickProductCreateP
                 />
               </FieldContent>
             </Field>
-
-            <Field>
-              <FieldLabel>{t('pricingLabel')}</FieldLabel>
-              <FieldContent>
-                <RadioGroup
-                  value={pricingMode}
-                  onValueChange={(value) => setPricingMode(value as PricingMode)}
-                  className="grid grid-cols-2 gap-3"
-                >
-                  {(['free', 'paid'] as const).map((mode) => (
-                    <label
-                      key={mode}
-                      onClick={() => !atLimit && setPricingMode(mode)}
-                      className={cn(
-                        'flex cursor-pointer items-center gap-2 rounded-lg border p-3 text-sm',
-                        pricingMode === mode && 'border-primary bg-primary/5'
-                      )}
-                    >
-                      <RadioGroupItem value={mode} disabled={atLimit} />
-                      {t(mode)}
-                    </label>
-                  ))}
-                </RadioGroup>
-              </FieldContent>
-            </Field>
-
-            {pricingMode === 'paid' && (
-              <Field>
-                <FieldLabel htmlFor="quick-price">{t('priceLabel')}</FieldLabel>
-                <FieldContent>
-                  <div className="relative">
-                    <span className="absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
-                      $
-                    </span>
-                    <Input
-                      id="quick-price"
-                      type="number"
-                      min="0.5"
-                      step="0.01"
-                      inputMode="decimal"
-                      value={price}
-                      onChange={(e) => setPrice(e.target.value)}
-                      placeholder="19.99"
-                      className="pl-7"
-                      disabled={atLimit}
-                    />
-                  </div>
-                  <p className="mt-1 text-xs text-muted-foreground">{t('priceHint')}</p>
-                </FieldContent>
-              </Field>
-            )}
           </FieldGroup>
         </CardContent>
         <CardFooter className="flex flex-col gap-3">
@@ -224,13 +155,6 @@ export function QuickProductCreate({ limitInfo, className }: QuickProductCreateP
               {saving === 'draft' ? t('savingDraft') : t('saveDraft')}
             </Button>
           </div>
-          <Link
-            href="/dashboard/admin/products/new"
-            className="inline-flex items-center gap-1 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-          >
-            {t('moreOptions')}
-            <IconArrowRight className="size-3.5" />
-          </Link>
         </CardFooter>
       </Card>
     </div>

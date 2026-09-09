@@ -12,7 +12,6 @@ import {
 } from '@/components/ui/dropdown-menu'
 
 interface ExportData {
-  revenueData: Array<{ date: string; revenue: number; transactions: number }>
   userGrowthData: Array<{ date: string; newUsers: number; totalUsers: number }>
   coursePopularityData: Array<{
     courseId: number
@@ -21,7 +20,6 @@ interface ExportData {
     completionRate: number
   }>
   metrics: {
-    totalRevenue: number
     totalUsers: number
     totalEnrollments: number
     activeStudents: number
@@ -48,14 +46,6 @@ export function ExportButton({ data, period }: ExportButtonProps) {
     document.body.removeChild(link)
   }
 
-  const exportRevenue = () => {
-    let csv = 'Date,Revenue,Transactions\n'
-    data.revenueData.forEach((row) => {
-      csv += `${row.date},${row.revenue.toFixed(2)},${row.transactions}\n`
-    })
-    downloadCSV(csv, `revenue-report-${period}-days.csv`)
-  }
-
   const exportUserGrowth = () => {
     let csv = 'Date,New Users,Total Users\n'
     data.userGrowthData.forEach((row) => {
@@ -74,7 +64,6 @@ export function ExportButton({ data, period }: ExportButtonProps) {
 
   const exportSummary = () => {
     let csv = 'Metric,Value\n'
-    csv += `Total Revenue,$${data.metrics.totalRevenue.toFixed(2)}\n`
     csv += `Total Users,${data.metrics.totalUsers}\n`
     csv += `Total Enrollments,${data.metrics.totalEnrollments}\n`
     csv += `Active Students (30 days),${data.metrics.activeStudents}\n`
@@ -85,16 +74,10 @@ export function ExportButton({ data, period }: ExportButtonProps) {
   const exportAll = () => {
     let csv = '=== ANALYTICS SUMMARY ===\n'
     csv += 'Metric,Value\n'
-    csv += `Total Revenue,$${data.metrics.totalRevenue.toFixed(2)}\n`
     csv += `Total Users,${data.metrics.totalUsers}\n`
     csv += `Total Enrollments,${data.metrics.totalEnrollments}\n`
     csv += `Active Students (30 days),${data.metrics.activeStudents}\n`
     csv += `Average Completion Rate,${data.metrics.averageCompletionRate.toFixed(2)}%\n`
-    csv += '\n=== REVENUE DATA ===\n'
-    csv += 'Date,Revenue,Transactions\n'
-    data.revenueData.forEach((row) => {
-      csv += `${row.date},${row.revenue.toFixed(2)},${row.transactions}\n`
-    })
     csv += '\n=== USER GROWTH DATA ===\n'
     csv += 'Date,New Users,Total Users\n'
     data.userGrowthData.forEach((row) => {
@@ -121,7 +104,6 @@ export function ExportButton({ data, period }: ExportButtonProps) {
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={exportAll}>{t('all')}</DropdownMenuItem>
         <DropdownMenuItem onClick={exportSummary}>{t('summary')}</DropdownMenuItem>
-        <DropdownMenuItem onClick={exportRevenue}>{t('revenue')}</DropdownMenuItem>
         <DropdownMenuItem onClick={exportUserGrowth}>
           {t('userGrowth')}
         </DropdownMenuItem>

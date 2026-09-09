@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest'
 
 const sidebar = readFileSync('components/app-sidebar.tsx', 'utf8')
 const adminHome = readFileSync('app/[locale]/dashboard/admin/page.tsx', 'utf8')
+const analytics = readFileSync('app/[locale]/dashboard/admin/analytics/page.tsx', 'utf8')
+const upgradeNudge = readFileSync('components/shared/upgrade-nudge.tsx', 'utf8')
 
 describe('commerce nav disable', () => {
   it('drops store, billing, payouts, and platform billing from the school shell', () => {
@@ -28,5 +30,12 @@ describe('commerce nav disable', () => {
     expect(adminHome).not.toContain('netOfRefunds')
     expect(adminHome).not.toContain('connect-payments')
     expect(adminHome).toContain('data-testid="admin-stats-grid"')
+  })
+
+  it('drops revenue and billing upgrade from analytics and upgrade nudges', () => {
+    expect(analytics).not.toContain('netOfRefunds')
+    expect(analytics).not.toContain('RevenueChart')
+    expect(analytics).not.toContain("from('transactions')")
+    expect(upgradeNudge).not.toContain('/dashboard/admin/billing/upgrade')
   })
 })
