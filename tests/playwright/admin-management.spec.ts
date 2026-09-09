@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { loginAsAdmin } from './utils/auth'
 import { TENANT_BASE } from './utils/constants'
+import { expectCommerceRedirect } from './utils/commerce-gone'
 
 /**
  * P1 — Admin Management Tests
@@ -12,14 +13,20 @@ test.describe('Admin Management', () => {
     await loginAsAdmin(page)
   })
 
-  test('admin payment requests page loads', async ({ page }) => {
-    await page.goto(`${TENANT_BASE}/en/dashboard/admin/payment-requests`, { timeout: 30_000 })
-    await expect(page.getByTestId('payment-requests-page')).toBeVisible({ timeout: 15_000 })
+  test('admin payment requests URL redirects away from the deleted UI', async ({ page }) => {
+    await expectCommerceRedirect(
+      page,
+      `${TENANT_BASE}/en/dashboard/admin/payment-requests`,
+      /\/payment-requests/,
+    )
   })
 
-  test('admin subscriptions page loads', async ({ page }) => {
-    await page.goto(`${TENANT_BASE}/en/dashboard/admin/subscriptions`)
-    await expect(page.getByTestId('subscriptions-page')).toBeVisible()
+  test('admin subscriptions URL redirects away from the deleted UI', async ({ page }) => {
+    await expectCommerceRedirect(
+      page,
+      `${TENANT_BASE}/en/dashboard/admin/subscriptions`,
+      /\/subscriptions/,
+    )
   })
 
   test('admin notifications page loads', async ({ page }) => {
@@ -36,18 +43,22 @@ test.describe('Admin Management', () => {
     ).toBeVisible()
   })
 
-  test('admin billing page shows current plan and usage', async ({ page }) => {
-    await page.goto(`${TENANT_BASE}/en/dashboard/admin/billing`)
-    await expect(page.getByTestId('billing-page')).toBeVisible()
-    await expect(page.getByText(/Billing/i).first()).toBeVisible()
+  test('admin billing URL redirects away from the deleted UI', async ({ page }) => {
+    await expectCommerceRedirect(
+      page,
+      `${TENANT_BASE}/en/dashboard/admin/billing`,
+      /\/billing/,
+    )
   })
 
-  test('admin billing upgrade page shows plan comparison', async ({
+  test('admin billing upgrade URL redirects away from the deleted UI', async ({
     page,
   }) => {
-    await page.goto(`${TENANT_BASE}/en/dashboard/admin/billing/upgrade`)
-    await expect(page.getByTestId('upgrade-page')).toBeVisible()
-    await expect(page.getByText(/Upgrade Your Plan/i)).toBeVisible()
+    await expectCommerceRedirect(
+      page,
+      `${TENANT_BASE}/en/dashboard/admin/billing/upgrade`,
+      /\/billing/,
+    )
   })
 
   test('admin analytics page loads', async ({ page }) => {

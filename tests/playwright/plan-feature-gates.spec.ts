@@ -10,6 +10,7 @@ import { test, expect } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
 import { loginAsTeacher, loginAsAdmin } from './utils/auth'
 import { BASE, TENANT_BASE, LOCALE } from './utils/constants'
+import { expectCommerceRedirect } from './utils/commerce-gone'
 
 const DEFAULT_TENANT = '00000000-0000-0000-0000-000000000001'
 const admin = createClient(
@@ -75,12 +76,7 @@ test.describe('Plan feature gates (#662)', () => {
     await expect(page.locator('#primary_color')).toBeVisible()
   })
 
-  test('public pricing table no longer sells API access', async ({ page }) => {
-    await page.goto(`${BASE}/${LOCALE}/platform-pricing`)
-    await page.waitForLoadState('networkidle')
-    // Feature-row labels only: the Enterprise plan description still mentions
-    // "API access" in prose, which is fine — it is the comparison row that sold it.
-    await expect(page.getByText('API Access', { exact: true })).toHaveCount(0)
-    await expect(page.getByText('Remove "Powered by" branding', { exact: true }).first()).toBeVisible()
+  test('public platform-pricing URL redirects away from the deleted UI', async ({ page }) => {
+    await expectCommerceRedirect(page, `${BASE}/${LOCALE}/platform-pricing`, /\/platform-pricing/)
   })
 })

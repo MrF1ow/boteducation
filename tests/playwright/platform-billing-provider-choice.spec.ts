@@ -2,6 +2,9 @@ import { test, expect } from '@playwright/test'
 import { login } from './utils/auth'
 import { BASE, LOCALE, ACCOUNTS } from './utils/constants'
 import { DEFAULT_TENANT, getServiceRoleClient } from './utils/seed-state'
+import { COMMERCE_UI_GONE } from './utils/commerce-gone'
+
+test.skip(true, COMMERCE_UI_GONE)
 
 /**
  * The payment-method step on the school's upgrade page, and the contract of the
