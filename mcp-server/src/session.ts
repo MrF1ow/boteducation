@@ -62,20 +62,49 @@ export function resolveMcpAuth(ctx: unknown): ResolvedAuth | undefined {
   return undefined;
 }
 
-function incomingHeader(ctx: unknown, name: string): string | null {
-  const bag = ctx as {
-    request?: { headers?: Headers | Record<string, string> };
-    req?: { headers?: Headers | Record<string, string> };
+function headerValue(raw: unknown, name: string): string | null {
+  if (!raw || typeof raw !== "object") return null;
+  const rec = raw as {
+    header?: (n: string) => string | undefined;
+    get?: (n: string) => string | null;
+    raw?: { headers?: Headers };
     headers?: Headers | Record<string, string>;
   };
-  const raw =
-    bag.request?.headers ?? bag.req?.headers ?? bag.headers ?? undefined;
-  if (!raw) return null;
-  if (typeof (raw as Headers).get === "function") {
-    return (raw as Headers).get(name);
+  if (typeof rec.header === "function") {
+    const value = rec.header(name);
+    if (value) return value;
   }
-  const rec = raw as Record<string, string>;
-  return rec[name] ?? rec[name.toLowerCase()] ?? null;
+  if (typeof rec.get === "function") {
+    const value = rec.get(name);
+    if (value) return value;
+  }
+  if (rec.raw?.headers && typeof rec.raw.headers.get === "function") {
+    const value = rec.raw.headers.get(name);
+    if (value) return value;
+  }
+  const nested = rec.headers;
+  if (nested && typeof (nested as Headers).get === "function") {
+    return (nested as Headers).get(name);
+  }
+  if (nested && typeof nested === "object") {
+    const map = nested as Record<string, string>;
+    return map[name] ?? map[name.toLowerCase()] ?? null;
+  }
+  return null;
+}
+
+/** Read an HTTP header from mcp-use's Hono-shaped RequestContext. */
+export function incomingHeader(ctx: unknown, name: string): string | null {
+  const bag = ctx as {
+    request?: unknown;
+    req?: unknown;
+    headers?: unknown;
+  };
+  return (
+    headerValue(bag.request, name) ??
+    headerValue(bag.req, name) ??
+    headerValue(bag, name)
+  );
 }
 
 /** Read the caller's tenant role from the verified JWT claims. */
