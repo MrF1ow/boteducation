@@ -83,6 +83,13 @@ test.describe('Homework submit, draft grade, publish', () => {
     )
     expect(assignmentId).toBeGreaterThan(0)
 
+    const scoped = await mcpCall(pat!, 'lms_create_assignment', {
+      course_id: 1002,
+      title: `Out of scope ${Date.now()}`,
+    })
+    const denyText = `${scoped.result?.content?.[0]?.text ?? ''} ${JSON.stringify(scoped.error ?? {})}`
+    expect(denyText).toMatch(/Access denied: this token is scoped to courses \[1001\], not course 1002/)
+
     await loginAsStudent(page)
     await page.goto(
       `${BASE}/en/dashboard/student/courses/${COURSE_ID}/assignments/${assignmentId}`,
