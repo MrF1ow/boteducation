@@ -142,26 +142,47 @@ export type Database = {
       assignments: {
         Row: {
           assignment_id: number
+          body: string | null
           course_id: number
           created_at: string | null
+          created_by: string | null
           description: string | null
+          due_at: string | null
           due_date: string | null
+          late_policy: Json
+          max_score: number
+          published: boolean
+          rubric: Json | null
           title: string
         }
         Insert: {
           assignment_id?: number
+          body?: string | null
           course_id: number
           created_at?: string | null
+          created_by?: string | null
           description?: string | null
+          due_at?: string | null
           due_date?: string | null
+          late_policy?: Json
+          max_score?: number
+          published?: boolean
+          rubric?: Json | null
           title: string
         }
         Update: {
           assignment_id?: number
+          body?: string | null
           course_id?: number
           created_at?: string | null
+          created_by?: string | null
           description?: string | null
+          due_at?: string | null
           due_date?: string | null
+          late_policy?: Json
+          max_score?: number
+          published?: boolean
+          rubric?: Json | null
           title?: string
         }
         Relationships: [
@@ -1387,6 +1408,63 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      course_professor_bots: {
+        Row: {
+          course_id: number
+          created_at: string
+          id: string
+          late_policy: Json
+          mcp_token_id: number | null
+          model: string
+          name: string
+          rubric_rules: string
+          system_prompt: string
+          tool_allowlist: string[]
+          updated_at: string
+        }
+        Insert: {
+          course_id: number
+          created_at?: string
+          id?: string
+          late_policy?: Json
+          mcp_token_id?: number | null
+          model?: string
+          name: string
+          rubric_rules?: string
+          system_prompt?: string
+          tool_allowlist?: string[]
+          updated_at?: string
+        }
+        Update: {
+          course_id?: number
+          created_at?: string
+          id?: string
+          late_policy?: Json
+          mcp_token_id?: number | null
+          model?: string
+          name?: string
+          rubric_rules?: string
+          system_prompt?: string
+          tool_allowlist?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_professor_bots_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "course_professor_bots_mcp_token_id_fkey"
+            columns: ["mcp_token_id"]
+            isOneToOne: false
+            referencedRelation: "mcp_api_tokens"
             referencedColumns: ["id"]
           },
         ]
@@ -3059,6 +3137,10 @@ export type Database = {
           grade: number | null
           grade_id: number
           graded_at: string | null
+          graded_by: string | null
+          published: boolean
+          score: number | null
+          source: string
           student_id: string
           submission_id: number | null
         }
@@ -3068,6 +3150,10 @@ export type Database = {
           grade?: number | null
           grade_id?: number
           graded_at?: string | null
+          graded_by?: string | null
+          published?: boolean
+          score?: number | null
+          source?: string
           student_id: string
           submission_id?: number | null
         }
@@ -3077,6 +3163,10 @@ export type Database = {
           grade?: number | null
           grade_id?: number
           graded_at?: string | null
+          graded_by?: string | null
+          published?: boolean
+          score?: number | null
+          source?: string
           student_id?: string
           submission_id?: number | null
         }
@@ -3099,7 +3189,7 @@ export type Database = {
             foreignKeyName: "grades_submission_id_fkey"
             columns: ["submission_id"]
             isOneToOne: false
-            referencedRelation: "exam_submissions"
+            referencedRelation: "submissions"
             referencedColumns: ["submission_id"]
           },
         ]
@@ -3992,6 +4082,7 @@ export type Database = {
       }
       mcp_api_tokens: {
         Row: {
+          course_ids: number[] | null
           created_at: string
           created_ip: unknown
           expires_at: string | null
@@ -4001,9 +4092,11 @@ export type Database = {
           last_used_ip: unknown
           name: string
           token_hash: string
+          token_role: string
           user_id: string
         }
         Insert: {
+          course_ids?: number[] | null
           created_at?: string
           created_ip?: unknown
           expires_at?: string | null
@@ -4013,9 +4106,11 @@ export type Database = {
           last_used_ip?: unknown
           name: string
           token_hash: string
+          token_role?: string
           user_id: string
         }
         Update: {
+          course_ids?: number[] | null
           created_at?: string
           created_ip?: unknown
           expires_at?: string | null
@@ -4025,6 +4120,7 @@ export type Database = {
           last_used_ip?: unknown
           name?: string
           token_hash?: string
+          token_role?: string
           user_id?: string
         }
         Relationships: []
@@ -5713,24 +5809,36 @@ export type Database = {
       submissions: {
         Row: {
           assignment_id: number
+          body: string | null
           file_path: string | null
+          files: Json
+          status: string
           student_id: string
           submission_date: string | null
           submission_id: number
+          submitted_at: string | null
         }
         Insert: {
           assignment_id: number
+          body?: string | null
           file_path?: string | null
+          files?: Json
+          status?: string
           student_id: string
           submission_date?: string | null
           submission_id?: number
+          submitted_at?: string | null
         }
         Update: {
           assignment_id?: number
+          body?: string | null
           file_path?: string | null
+          files?: Json
+          status?: string
           student_id?: string
           submission_date?: string | null
           submission_id?: number
+          submitted_at?: string | null
         }
         Relationships: [
           {
@@ -6525,6 +6633,16 @@ export type Database = {
       }
     }
     Views: {
+      course_calendar_items: {
+        Row: {
+          course_id: number | null
+          due_at: string | null
+          item_id: number | null
+          item_kind: string | null
+          title: string | null
+        }
+        Relationships: []
+      }
       distinct_exam_views: {
         Row: {
           exam_course_id: number | null
@@ -7130,11 +7248,21 @@ export type Database = {
         Args: { ip_input: unknown; token_id_input: number }
         Returns: undefined
       }
+      post_course_announcement: {
+        Args: { p_body: string; p_course_id: number; p_title: string }
+        Returns: number
+      }
+      student_may_resubmit: {
+        Args: { p_assignment_id: number; p_status: string }
+        Returns: boolean
+      }
       validate_mcp_api_token: {
         Args: { token_input: string }
         Returns: {
+          course_ids: number[] | null
           email: string
           token_id: number
+          token_role: string
           user_id: string
           user_role: string
         }[]
