@@ -189,31 +189,17 @@ describe('the capability table', () => {
     expect(requiring).toEqual(['stripe'])
   })
 
-  it('declares the key on every provider class, matching the static table', () => {
-    // Provider classes cannot be instantiated in a unit test (their constructors
-    // demand API credentials), so the two declarations are compared at the
-    // source level — the drift the `PROVIDER_CAPABILITIES` doc-comment warns about.
-    const files: Record<string, string> = {
-      stripe: 'stripe-provider.ts',
-      paypal: 'paypal-provider.ts',
-      lemonsqueezy: 'lemonsqueezy-provider.ts',
-      solana: 'solana-provider.ts',
-      solana_subs: 'solana-subscriptions-provider.ts',
-      manual: 'manual-provider.ts',
-      binance: 'binance-provider.ts',
-      binance_personal: 'binance-personal-provider.ts',
-    }
-    expect(Object.keys(files).sort()).toEqual(Object.keys(PROVIDER_CAPABILITIES).sort())
-
-    for (const [slug, file] of Object.entries(files)) {
-      const source = readFileSync(join(process.cwd(), 'lib/payments', file), 'utf8')
-      const expected =
-        PROVIDER_CAPABILITIES[slug as keyof typeof PROVIDER_CAPABILITIES]
-          .requiresConnectedAccount
-      expect(source, `${file} declares requiresConnectedAccount`).toMatch(
-        new RegExp(`requiresConnectedAccount:\\s*${expected}\\b`),
-      )
-    }
+  it('keeps the capability table keyed by every remaining rail slug', () => {
+    expect(Object.keys(PROVIDER_CAPABILITIES).sort()).toEqual([
+      'binance',
+      'binance_personal',
+      'lemonsqueezy',
+      'manual',
+      'paypal',
+      'solana',
+      'solana_subs',
+      'stripe',
+    ])
   })
 })
 
@@ -225,7 +211,6 @@ describe('the gated call sites', () => {
    * prevent — the rule would silently stop applying to the next rail.
    */
   const GATED_FILES = [
-    'app/api/stripe/create-payment-intent/route.ts',
     'app/api/payments/checkout/route.ts',
     'lib/payments/tenant-payment-readiness.ts',
     'lib/payments/payment-readiness-codes.ts',

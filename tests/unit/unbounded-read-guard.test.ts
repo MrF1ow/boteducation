@@ -71,8 +71,6 @@ const KNOWN_UNBOUNDED: Record<string, string> = {
   'lib/hooks/use-course-access.ts::entitlements': 'scoped — one user’s entitlements',
   'lib/services/course-access.ts::entitlements': 'scoped — one user’s entitlements',
   'lib/payments/subscription-guard.ts::subscriptions': 'scoped — one user’s subscriptions',
-  'app/api/cron/expire-stale-checkouts/route.ts::transactions':
-    'scoped — the write-back `.in()` only ever carries the ids from the same pass’s own `.limit(BATCH_LIMIT)` read (200), so it cannot reach the API row cap',
 
   // scoped: one course (large, but bounded by a course roster)
   'app/[locale]/dashboard/teacher/courses/[courseId]/page.tsx::enrollments': 'scoped — one course roster',
@@ -92,10 +90,8 @@ const KNOWN_UNBOUNDED: Record<string, string> = {
   'app/[locale]/dashboard/admin/tenants/page.tsx::tenants': 'gap #540 — platform-wide listing',
   'app/[locale]/dashboard/teacher/page.tsx::enrollments': 'gap #540 — tenant-wide, counted',
   'app/actions/admin/binance-personal.ts::transactions': 'gap #540 — tenant-wide reconcile list',
-  'app/api/cron/binance-personal-reconcile/route.ts::transactions': 'gap #540 — platform-wide cron queue',
   'app/api/cron/expire-subscriptions/route.ts::subscriptions': 'gap #540 — platform-wide cron queue',
   'app/api/cron/expire-platform-subscriptions/route.ts::platform_subscriptions': 'gap #540 — platform-wide cron queue',
-  'app/api/stripe/webhook/route.ts::transactions': 'gap #540 — platform-wide pending scan',
 
   // scoped: tenant_id is the table's unique key, so the transition-guarded
   // past_due update returns at most one row — its .select() is the proof the
