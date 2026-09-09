@@ -31,6 +31,9 @@ import { test, expect } from '@playwright/test'
 import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js'
 import { login } from './utils/auth'
 import { BASE, LOCALE, ACCOUNTS } from './utils/constants'
+import { COMMERCE_UI_GONE } from './utils/commerce-gone'
+
+test.skip(true, COMMERCE_UI_GONE)
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */

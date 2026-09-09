@@ -1,6 +1,9 @@
 import { test, expect } from '@playwright/test'
 import { loginAsTenantStudent } from './utils/auth'
 import { TENANT_BASE } from './utils/constants'
+import { COMMERCE_UI_GONE } from './utils/commerce-gone'
+
+test.skip(true, COMMERCE_UI_GONE)
 
 /**
  * P0 — Parallel-subscription double-billing guard (issue #459).

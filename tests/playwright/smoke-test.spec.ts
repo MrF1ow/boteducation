@@ -27,9 +27,7 @@ const STUDENT_PAGES: PageDef[] = [
   { name: 'Browse', path: '/dashboard/student/browse' },
   { name: 'Progress', path: '/dashboard/student/progress' },
   { name: 'Certificates', path: '/dashboard/student/certificates' },
-  { name: 'Payments', path: '/dashboard/student/payments' },
   { name: 'Community', path: '/dashboard/student/community' },
-  { name: 'Store', path: '/dashboard/student/store' },
   { name: 'Profile', path: '/dashboard/student/profile' },
 ]
 
@@ -38,30 +36,20 @@ const TEACHER_PAGES: PageDef[] = [
   { name: 'Courses', path: '/dashboard/teacher/courses' },
   { name: 'Templates', path: '/dashboard/teacher/templates' },
   { name: 'Community', path: '/dashboard/teacher/community' },
-  { name: 'Revenue', path: '/dashboard/teacher/revenue' },
   { name: 'API Tokens', path: '/dashboard/teacher/api-tokens' },
 ]
 
 const ADMIN_PAGES: PageDef[] = [
   { name: 'Dashboard', path: '/dashboard/admin' },
   { name: 'Courses', path: '/dashboard/admin/courses' },
-  { name: 'Products', path: '/dashboard/admin/products' },
-  { name: 'Plans', path: '/dashboard/admin/plans' },
   { name: 'Users', path: '/dashboard/admin/users' },
   { name: 'Enrollments', path: '/dashboard/admin/enrollments' },
-  { name: 'Transactions', path: '/dashboard/admin/transactions' },
-  { name: 'Subscriptions', path: '/dashboard/admin/subscriptions' },
-  { name: 'Payment Requests', path: '/dashboard/admin/payment-requests' },
-  { name: 'Revenue', path: '/dashboard/admin/revenue' },
-  { name: 'Monetization', path: '/dashboard/admin/monetization' },
   { name: 'Analytics', path: '/dashboard/admin/analytics' },
   { name: 'Categories', path: '/dashboard/admin/categories' },
   { name: 'Community', path: '/dashboard/admin/community' },
   { name: 'Notifications', path: '/dashboard/admin/notifications' },
   { name: 'Settings', path: '/dashboard/admin/settings' },
   { name: 'Appearance', path: '/dashboard/admin/appearance' },
-  { name: 'Billing', path: '/dashboard/admin/billing' },
-  { name: 'Landing Page', path: '/dashboard/admin/landing-page' },
   { name: 'API Tokens', path: '/dashboard/admin/api-tokens' },
 ]
 
@@ -91,7 +79,7 @@ type PageResult = {
 }
 
 const results: PageResult[] = []
-let loginFailures: string[] = []
+const loginFailures: string[] = []
 
 function isNoise(text: string): boolean {
   return CONSOLE_NOISE.some((n) => text.includes(n))

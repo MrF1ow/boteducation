@@ -1,69 +1,10 @@
-import { Suspense } from 'react'
-import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar"
-import { Separator } from "@/components/ui/separator"
-import { PlatformSidebar } from "@/components/platform-sidebar"
-import { PlatformHeaderTitle } from "@/components/platform/header-title"
-import { ModeToggle } from "@/components/mode-toggle"
-import { UserNav } from "@/components/user-nav"
-import { createAdminClient } from "@/lib/supabase/admin"
-import { isSuperAdmin } from "@/lib/supabase/get-user-role"
-import { getSessionUser } from "@/lib/supabase/tenant"
-import { redirect } from "next/navigation"
-import type { Metadata } from "next"
+import { redirect } from 'next/navigation'
+import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
 }
 
-async function PlatformSidebarWithCount() {
-  const adminClient = createAdminClient()
-  const [{ count: pendingCount }, { count: atRiskCount }] = await Promise.all([
-    adminClient
-      .from('platform_payment_requests')
-      .select('*', { count: 'exact', head: true })
-      .in('status', ['pending', 'instructions_sent', 'payment_received']),
-    adminClient
-      .from('tenants')
-      .select('*', { count: 'exact', head: true })
-      .eq('billing_status', 'past_due'),
-  ])
-
-  return <PlatformSidebar pendingBillingCount={pendingCount ?? 0} atRiskCount={atRiskCount ?? 0} />
-}
-
-export default async function PlatformLayout({
-  children,
-  params,
-}: {
-  children: React.ReactNode
-  params: Promise<{ locale: string }>
-}) {
-  const { locale } = await params
-  const user = await getSessionUser()
-
-  if (!user || !(await isSuperAdmin())) {
-    redirect(`/${locale}/auth/login`)
-  }
-
-  return (
-    <SidebarProvider>
-      <Suspense fallback={<PlatformSidebar pendingBillingCount={0} />}>
-        <PlatformSidebarWithCount />
-      </Suspense>
-      <SidebarInset>
-        <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
-          <SidebarTrigger className="-ml-1" />
-          <Separator orientation="vertical" className="mr-2 h-4" />
-          <PlatformHeaderTitle />
-          <div className="ml-auto flex items-center gap-3">
-            <ModeToggle />
-            <UserNav user={user} />
-          </div>
-        </header>
-        <div className="flex flex-1 flex-col">
-          {children}
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
-  )
+export default function PlatformLayout() {
+  redirect('/dashboard')
 }

@@ -4,6 +4,30 @@ import { withSentryConfig } from "@sentry/nextjs";
 
 const withNextIntl = createNextIntlPlugin('./i18n.ts');
 
+/** Leftover SaaS URLs. Locale-prefixed; both the bare path and nested remainder. */
+const COMMERCE_GONE_PATHS = [
+  '/dashboard/student/store',
+  '/dashboard/student/payments',
+  '/dashboard/student/billing',
+  '/dashboard/admin/payouts',
+  '/dashboard/admin/products',
+  '/dashboard/admin/plans',
+  '/dashboard/admin/monetization',
+  '/dashboard/admin/billing',
+  '/dashboard/admin/revenue',
+  '/dashboard/admin/transactions',
+  '/dashboard/admin/subscriptions',
+  '/dashboard/admin/invoices',
+  '/dashboard/admin/payment-requests',
+  '/dashboard/admin/landing-page',
+  '/dashboard/teacher/revenue',
+  '/checkout',
+  '/pricing',
+  '/platform-pricing',
+  '/products',
+  '/platform',
+] as const
+
 const nextConfig: NextConfig = {
   output: 'standalone',
   // Local multi-tenant dev is served on subdomains (e.g. code-academy.lvh.me),
@@ -17,6 +41,20 @@ const nextConfig: NextConfig = {
     // Both are used repo-wide via barrel named imports (672 files each);
     // this lets Next.js rewrite them to per-icon imports at build time.
     optimizePackageImports: ['@tabler/icons-react', 'lucide-react'],
+  },
+  async redirects() {
+    return COMMERCE_GONE_PATHS.flatMap((path) => [
+      {
+        source: `/:locale${path}`,
+        destination: '/:locale/dashboard',
+        permanent: false,
+      },
+      {
+        source: `/:locale${path}/:path*`,
+        destination: '/:locale/dashboard',
+        permanent: false,
+      },
+    ])
   },
   async rewrites() {
     return {

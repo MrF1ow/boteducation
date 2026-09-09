@@ -451,11 +451,11 @@ test.describe('Teacher Content — Revenue & Templates Pages', () => {
     await loginAsTeacher(page)
   })
 
-  test('revenue dashboard loads', async ({ page }) => {
+  test('revenue URL redirects away from the deleted revenue UI', async ({ page }) => {
     await page.goto(`${BASE}/${LOCALE}/dashboard/teacher/revenue`)
-    await expect(page.getByTestId('revenue-page')).toBeVisible()
-    // Use h1 to avoid matching multiple "revenue" elements on the page
-    await expect(page.locator('h1').first()).toBeVisible()
+    await expect(page).not.toHaveURL(/\/revenue/)
+    await expect(page.getByTestId('revenue-page')).toHaveCount(0)
+    await expect(page.getByText('This page could not be found')).toHaveCount(0)
   })
 
   test('templates page loads', async ({ page }) => {

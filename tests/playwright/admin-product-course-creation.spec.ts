@@ -1,6 +1,9 @@
 import { expect, type Page, test } from '@playwright/test'
 import { loginAsAdmin } from './utils/auth'
 import { LOCALE, TENANT_BASE } from './utils/constants'
+import { COMMERCE_UI_GONE } from './utils/commerce-gone'
+
+test.skip(true, COMMERCE_UI_GONE)
 
 // /products/new is the multi-step product wizard these helpers drive; the
 // one-screen quick create is the admin "create a course" page (#665).

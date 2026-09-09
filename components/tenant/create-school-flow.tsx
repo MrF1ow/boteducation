@@ -193,9 +193,7 @@ export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps
 
       // Land directly on the dashboard (subdomain if configured), carrying a
       // paid plan choice from /platform-pricing into the upgrade page.
-      const destination = planQuery
-        ? `/dashboard/admin/billing/upgrade${planQuery}`
-        : '/dashboard/admin'
+      const destination = '/dashboard/admin'
       const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN
       if (platformDomain && platformDomain !== 'localhost') {
         const protocol = window.location.protocol

@@ -62,8 +62,6 @@ const BOUNDING_TOKENS = ['.range(', '.single(', '.maybeSingle(', '.limit(', 'hea
  */
 const KNOWN_UNBOUNDED: Record<string, string> = {
   // scoped: a single user's own rows
-  'app/[locale]/dashboard/student/billing/page.tsx::transactions': 'scoped — one user’s own purchases',
-  'app/[locale]/dashboard/student/billing/page.tsx::subscriptions': 'scoped — one user’s own subscriptions',
   'app/[locale]/dashboard/student/courses/page.tsx::enrollments': 'scoped — one user’s enrolments',
   'app/[locale]/dashboard/student/page.tsx::enrollments': 'scoped — one user’s enrolments',
   'app/[locale]/dashboard/student/progress/page.tsx::enrollments': 'scoped — one user’s enrolments',
@@ -71,8 +69,6 @@ const KNOWN_UNBOUNDED: Record<string, string> = {
   'lib/hooks/use-course-access.ts::entitlements': 'scoped — one user’s entitlements',
   'lib/services/course-access.ts::entitlements': 'scoped — one user’s entitlements',
   'lib/payments/subscription-guard.ts::subscriptions': 'scoped — one user’s subscriptions',
-  'app/api/cron/expire-stale-checkouts/route.ts::transactions':
-    'scoped — the write-back `.in()` only ever carries the ids from the same pass’s own `.limit(BATCH_LIMIT)` read (200), so it cannot reach the API row cap',
 
   // scoped: one course (large, but bounded by a course roster)
   'app/[locale]/dashboard/teacher/courses/[courseId]/page.tsx::enrollments': 'scoped — one course roster',
@@ -81,21 +77,13 @@ const KNOWN_UNBOUNDED: Record<string, string> = {
   'app/actions/admin/notifications.ts::enrollments': 'scoped — one course roster',
 
   // gap: tenant- or platform-wide sweeps, #533 class, not in #548's scope
-  'app/[locale]/dashboard/admin/analytics/page.tsx::transactions': 'gap #540 — tenant-wide, summed',
   'app/[locale]/dashboard/admin/analytics/page.tsx::enrollments': 'gap #540 — tenant-wide, counted',
-  'app/[locale]/dashboard/admin/page.tsx::transactions': 'gap #540 — tenant-wide, summed',
   'app/[locale]/dashboard/admin/courses/page.tsx::enrollments': 'gap #540 — tenant-wide, counted',
   'app/[locale]/dashboard/admin/enrollments/page.tsx::enrollments': 'gap #540 — tenant-wide listing',
   'app/[locale]/dashboard/admin/users/page.tsx::enrollments': 'gap #540 — tenant-wide, counted',
-  'app/[locale]/dashboard/admin/subscriptions/page.tsx::subscriptions': 'gap #540 — tenant-wide listing',
-  'app/[locale]/dashboard/admin/transactions/page.tsx::transactions': 'gap #540 — tenant-wide listing',
   'app/[locale]/dashboard/admin/tenants/page.tsx::tenants': 'gap #540 — platform-wide listing',
   'app/[locale]/dashboard/teacher/page.tsx::enrollments': 'gap #540 — tenant-wide, counted',
   'app/actions/admin/binance-personal.ts::transactions': 'gap #540 — tenant-wide reconcile list',
-  'app/api/cron/binance-personal-reconcile/route.ts::transactions': 'gap #540 — platform-wide cron queue',
-  'app/api/cron/expire-subscriptions/route.ts::subscriptions': 'gap #540 — platform-wide cron queue',
-  'app/api/cron/expire-platform-subscriptions/route.ts::platform_subscriptions': 'gap #540 — platform-wide cron queue',
-  'app/api/stripe/webhook/route.ts::transactions': 'gap #540 — platform-wide pending scan',
 
   // scoped: tenant_id is the table's unique key, so the transition-guarded
   // past_due update returns at most one row — its .select() is the proof the
