@@ -13,6 +13,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { syncConnectAccountStatus } from '@/lib/stripe-connect'
 import EnrollmentSettingsForm from '@/components/admin/enrollment-settings-form'
+import { AutoPublishGradesToggle } from '@/components/admin/auto-publish-grades-toggle'
 import { ReferralLinkCard } from '@/components/admin/referral-link-card'
 import { ToursToggle } from '@/components/shared/tours-toggle'
 import { getUiState } from '@/lib/supabase/ui-state'
@@ -119,7 +120,20 @@ export default async function SettingsPage({
 
       <main className="mx-auto container px-4 py-6 sm:px-6 lg:px-8">
         <div className="space-y-6">
-          {/* Tabbed Settings Interface */}
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('sections.grading.title')}</CardTitle>
+              <CardDescription>
+                {t('sections.grading.description')}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AutoPublishGradesToggle
+                enabled={settings.general?.auto_publish_grades?.value?.enabled === true}
+              />
+            </CardContent>
+          </Card>
+
           <Tabs defaultValue={defaultTab} className="space-y-6">
             <TabsList className="flex w-full overflow-x-auto lg:w-auto">
               <TabsTrigger value="general">{t('tabs.general')}</TabsTrigger>

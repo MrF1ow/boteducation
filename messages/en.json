@@ -770,6 +770,40 @@
         "settings": "Settings",
         "sequentialCompletion": "Sequential lesson completion",
         "sequentialCompletionDescription": "When enabled, students must complete lessons in order. They cannot skip ahead to later lessons.",
+        "professorBots": {
+          "title": "Grok professors",
+          "description": "Bind a Grok professor to this course. Paste the MCP URL and token from API tokens into the bot. Do not store an xAI API key here.",
+          "empty": "No professor bots yet.",
+          "add": "Add professor",
+          "name": "Name",
+          "namePlaceholder": "e.g. CS 101 Professor",
+          "systemPrompt": "System prompt",
+          "systemPromptPlaceholder": "How this professor should teach and grade.",
+          "rubricRules": "Rubric rules",
+          "rubricRulesPlaceholder": "Scoring rules the professor must follow.",
+          "latePolicy": "Default late policy",
+          "lateReject": "Reject late work",
+          "lateAccept": "Accept late work",
+          "lateAcceptUntil": "Accept until a cutoff",
+          "latePenalize": "Accept with a daily penalty",
+          "acceptUntil": "Accept until",
+          "percentPerDay": "Penalty percent per day",
+          "model": "Model",
+          "linkedToken": "Linked MCP token",
+          "noToken": "No token linked",
+          "toolAllowlist": "Tool allowlist",
+          "toolAllowlistHint": "Leave unchecked to allow every professor tool. Checked tools are the only ones this bot should use.",
+          "save": "Save",
+          "saving": "Saving…",
+          "create": "Create",
+          "cancel": "Cancel",
+          "delete": "Delete",
+          "saved": "Professor saved",
+          "created": "Professor created",
+          "deleted": "Professor deleted",
+          "saveError": "Could not save professor",
+          "deleteError": "Could not delete professor"
+        },
         "min": "min",
         "video": "Video",
         "status": {
@@ -3170,6 +3204,14 @@
             "title": "Solana Wallet",
             "description": "Your school receiving wallet for Solana crypto payments (one-time and subscription)."
           },
+          "grading": {
+            "title": "Professor grading",
+            "description": "Control whether Grok professor grades go live immediately.",
+            "autoPublish": "Auto-publish AI grades",
+            "autoPublishHint": "When on, professor MCP grades are visible to students immediately. When off, they stay draft until published.",
+            "saved": "Auto-publish setting saved",
+            "saveError": "Could not save auto-publish setting"
+          },
           "personalPreferences": {
             "title": "Personal preferences",
             "description": "These settings apply only to your account, not the whole school."
@@ -3864,7 +3906,10 @@
           "expired": "Expired",
           "created": "Created {date}",
           "lastUsed": "Last used {date}",
-          "expires": "Expires {date}"
+          "expires": "Expires {date}",
+          "roleProfessor": "Professor",
+          "allCourses": "All courses",
+          "courseCount": "{count, plural, one {# course} other {# courses}}"
         },
         "createDialog": {
           "title": "Create API Token",
@@ -3877,11 +3922,16 @@
           "expiration90d": "90 days",
           "expirationNever": "Never",
           "creating": "Creating...",
-          "create": "Create Token"
+          "create": "Create Token",
+          "courseScope": "Course scope",
+          "courseScopeHint": "Leave unchecked to allow every course this account can access. Check one or more to lock the professor token to those courses.",
+          "noCourses": "No courses yet. Create a course first, then scope the token."
         },
         "revealDialog": {
           "title": "Token Created",
           "description": "Copy this token now. It won't be shown again.",
+          "pasteLabel": "Paste into Grok",
+          "pasteHint": "Docs for creating the Grok bot live outside this repo. Do not put an xAI API key here.",
           "configLabel": "Claude Desktop config",
           "done": "Done"
         },
