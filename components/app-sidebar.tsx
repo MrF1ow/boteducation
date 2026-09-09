@@ -8,14 +8,10 @@ import {
     IconBookmark,
     IconChartBar,
     IconChevronRight,
-    IconCoins,
-    IconCurrencyDollar,
     IconDashboard,
     IconKey,
-    IconLayout,
     IconLogout,
     IconMessages,
-    IconReceipt,
     IconSearch,
     IconSettings,
     IconSparkles,
@@ -157,30 +153,10 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                         { title: t('community'), href: "/dashboard/admin/community" },
                     ],
                 },
-                {
-                    title: t('monetization'), href: "/dashboard/admin/monetization", icon: IconCurrencyDollar,
-                    items: [
-                        { title: t('products'), href: "/dashboard/admin/products" },
-                        { title: t('plans'), href: "/dashboard/admin/plans" },
-                        { title: t('subscriptions'), href: "/dashboard/admin/subscriptions" },
-                        { title: t('transactions'), href: "/dashboard/admin/transactions" },
-                        { title: t('paymentRequests'), href: "/dashboard/admin/payment-requests" },
-                        { title: t('revenue'), href: "/dashboard/admin/revenue" },
-                        { title: t('payouts'), href: "/dashboard/admin/payouts" },
-                        { title: t('invoices'), href: "/dashboard/admin/invoices" },
-                    ],
-                },
                 { title: t('analytics'), href: "/dashboard/admin/analytics", icon: IconChartBar },
-                {
-                    title: t('website'), href: "/dashboard/admin/landing-page", icon: IconLayout,
-                    items: [
-                        { title: t('appearance'), href: "/dashboard/admin/appearance" },
-                    ],
-                },
                 {
                     title: t('settings'), href: "/dashboard/admin/settings", icon: IconSettings, tourId: 'sidebar-settings',
                     items: [
-                        { title: t('billing'), href: "/dashboard/admin/billing" },
                         { title: t('apiTokens'), href: "/dashboard/admin/api-tokens" },
                     ],
                 },
@@ -189,7 +165,6 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                 { title: t('dashboard'), href: "/dashboard/teacher", icon: IconDashboard },
                 { title: t('myCourses'), href: "/dashboard/teacher/courses", icon: IconBook, tourId: 'sidebar-courses' },
                 { title: t('community'), href: "/dashboard/teacher/community", icon: IconMessages },
-                { title: t('revenue'), href: "/dashboard/teacher/revenue", icon: IconCurrencyDollar },
                 { title: t('apiTokens'), href: "/dashboard/teacher/api-tokens", icon: IconKey },
             ],
             student: [
@@ -210,13 +185,6 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                 },
                 { title: t('community'), href: "/dashboard/student/community", icon: IconMessages },
                 { title: t('aiAssistant'), href: "/dashboard/student/ai-assistant", icon: IconSparkles },
-                {
-                    title: t('myBilling'), href: "/dashboard/student/billing", icon: IconReceipt,
-                    items: [
-                        { title: t('myPayments'), href: "/dashboard/student/payments" },
-                    ],
-                },
-                { title: t('pointStore'), href: "/dashboard/student/store", icon: IconCoins },
             ],
         }
 
