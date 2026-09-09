@@ -26,6 +26,8 @@ npm run start        # Start production server
 npm run lint         # Run ESLint
 ```
 
+Cloud Agents: `.cursor/environment.json` runs `scripts/cloud-agent-install.sh` and `scripts/cloud-agent-start.sh`. Use `http://lvh.me:3000` (not localhost). Seeded login: `student@e2etest.com` / `password123`.
+
 ### Database (Supabase)
 
 ```bash
