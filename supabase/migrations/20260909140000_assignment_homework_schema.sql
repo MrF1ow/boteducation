@@ -367,12 +367,14 @@ RETURNS TABLE (
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, extensions
 AS $$
 DECLARE
   token_hash_input text;
 BEGIN
-  token_hash_input := encode(digest(token_input, 'sha256'), 'hex');
+  -- pgcrypto lives in `extensions`. search_path=public alone 42883s digest()
+  -- and PostgREST maps that to a 404, so every professor PAT looks revoked.
+  token_hash_input := encode(digest(convert_to(token_input, 'UTF8'), 'sha256'), 'hex');
 
   RETURN QUERY
   SELECT

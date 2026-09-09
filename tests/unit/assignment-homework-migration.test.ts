@@ -33,6 +33,8 @@ describe('assignment homework migration', () => {
     expect(migration).toContain('CREATE TABLE IF NOT EXISTS public.course_professor_bots')
     expect(migration).toContain('course_ids integer[]')
     expect(migration).toContain('t.course_ids')
+    expect(migration).toContain('SET search_path = public, extensions')
+    expect(migration).toContain("digest(convert_to(token_input, 'UTF8'), 'sha256')")
   })
 
   it('builds a calendar view over assignments and exams', () => {
