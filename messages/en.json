@@ -4797,6 +4797,43 @@
       "starRating": "{star} stars"
     }
   },
+  "studentCourseWork": {
+    "nav": {
+      "label": "Course work",
+      "course": "Course",
+      "assignments": "Assignments",
+      "grades": "Grades",
+      "calendar": "Calendar"
+    },
+    "upcoming": "Upcoming assignments",
+    "noAssignments": "No assignments yet.",
+    "announcements": "Announcements",
+    "noAnnouncements": "No announcements.",
+    "due": "Due {date}",
+    "noDue": "No due date",
+    "latePolicy": {
+      "reject": "Late work is not accepted.",
+      "accept": "Late work is accepted.",
+      "acceptUntil": "Late work is accepted until {until}.",
+      "penalize": "Late work is accepted with a {percent}% penalty per day."
+    },
+    "submit": "Submit",
+    "submitting": "Submitting…",
+    "bodyPlaceholder": "Write your answer",
+    "submitted": "Submitted {date}",
+    "late": "Late",
+    "locked": "This assignment is locked.",
+    "lateRejected": "This assignment no longer accepts submissions.",
+    "maxScore": "Max score: {score}",
+    "pending": "Pending",
+    "score": "{score} / {max}",
+    "exam": "Exam",
+    "assignment": "Assignment",
+    "emptyGrades": "No published grades yet.",
+    "emptyCalendar": "No upcoming dates.",
+    "emptyAnswer": "Write an answer before submitting.",
+    "error": "Could not submit. Try again."
+  },
   "about": {
     "title": "Built for learning, by educators",
     "description": "LMS V2 is a modern learning platform that helps teachers create courses and students learn with clarity. We focus on speed, accessibility, and delightful UX.",

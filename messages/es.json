@@ -4790,6 +4790,43 @@
       "starRating": "{star} estrellas"
     }
   },
+  "studentCourseWork": {
+    "nav": {
+      "label": "Trabajo del curso",
+      "course": "Curso",
+      "assignments": "Tareas",
+      "grades": "Calificaciones",
+      "calendar": "Calendario"
+    },
+    "upcoming": "Próximas tareas",
+    "noAssignments": "Aún no hay tareas.",
+    "announcements": "Avisos",
+    "noAnnouncements": "No hay avisos.",
+    "due": "Entrega {date}",
+    "noDue": "Sin fecha de entrega",
+    "latePolicy": {
+      "reject": "No se aceptan entregas tarde.",
+      "accept": "Se aceptan entregas tarde.",
+      "acceptUntil": "Se aceptan entregas tarde hasta {until}.",
+      "penalize": "Se aceptan entregas tarde con una penalización del {percent}% por día."
+    },
+    "submit": "Entregar",
+    "submitting": "Entregando…",
+    "bodyPlaceholder": "Escribe tu respuesta",
+    "submitted": "Entregado {date}",
+    "late": "Tarde",
+    "locked": "Esta tarea está bloqueada.",
+    "lateRejected": "Esta tarea ya no acepta entregas.",
+    "maxScore": "Puntaje máximo: {score}",
+    "pending": "Pendiente",
+    "score": "{score} / {max}",
+    "exam": "Examen",
+    "assignment": "Tarea",
+    "emptyGrades": "Aún no hay calificaciones publicadas.",
+    "emptyCalendar": "No hay fechas próximas.",
+    "emptyAnswer": "Escribe una respuesta antes de entregar.",
+    "error": "No se pudo entregar. Inténtalo de nuevo."
+  },
   "about": {
     "title": "Construido para aprender, por educadores",
     "description": "LMS V2 es una plataforma de aprendizaje moderna que ayuda a los profesores a crear cursos y a los estudiantes a aprender con claridad. Nos enfocamos en la velocidad, la accesibilidad y una UX encantadora.",
