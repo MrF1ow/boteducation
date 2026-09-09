@@ -258,6 +258,6 @@ describe('refund-aware money sums (#547 §1)', () => {
         if (SUMS_AMOUNT.test(source)) seen.push(file)
       }
     }
-    expect(seen.length).toBeGreaterThanOrEqual(3)
+    expect(seen.length).toBeGreaterThanOrEqual(2)
   })
 })

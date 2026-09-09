@@ -211,7 +211,6 @@ describe('the gated call sites', () => {
    * prevent — the rule would silently stop applying to the next rail.
    */
   const GATED_FILES = [
-    'app/api/payments/checkout/route.ts',
     'lib/payments/tenant-payment-readiness.ts',
     'lib/payments/payment-readiness-codes.ts',
   ]

@@ -81,7 +81,6 @@ const KNOWN_UNBOUNDED: Record<string, string> = {
   // gap: tenant- or platform-wide sweeps, #533 class, not in #548's scope
   'app/[locale]/dashboard/admin/analytics/page.tsx::transactions': 'gap #540 — tenant-wide, summed',
   'app/[locale]/dashboard/admin/analytics/page.tsx::enrollments': 'gap #540 — tenant-wide, counted',
-  'app/[locale]/dashboard/admin/page.tsx::transactions': 'gap #540 — tenant-wide, summed',
   'app/[locale]/dashboard/admin/courses/page.tsx::enrollments': 'gap #540 — tenant-wide, counted',
   'app/[locale]/dashboard/admin/enrollments/page.tsx::enrollments': 'gap #540 — tenant-wide listing',
   'app/[locale]/dashboard/admin/users/page.tsx::enrollments': 'gap #540 — tenant-wide, counted',
@@ -90,8 +89,6 @@ const KNOWN_UNBOUNDED: Record<string, string> = {
   'app/[locale]/dashboard/admin/tenants/page.tsx::tenants': 'gap #540 — platform-wide listing',
   'app/[locale]/dashboard/teacher/page.tsx::enrollments': 'gap #540 — tenant-wide, counted',
   'app/actions/admin/binance-personal.ts::transactions': 'gap #540 — tenant-wide reconcile list',
-  'app/api/cron/expire-subscriptions/route.ts::subscriptions': 'gap #540 — platform-wide cron queue',
-  'app/api/cron/expire-platform-subscriptions/route.ts::platform_subscriptions': 'gap #540 — platform-wide cron queue',
 
   // scoped: tenant_id is the table's unique key, so the transition-guarded
   // past_due update returns at most one row — its .select() is the proof the

@@ -9,9 +9,6 @@ import { Badge } from '@/components/ui/badge'
 import {
   IconUsers,
   IconBook,
-  IconCurrencyDollar,
-  IconReceipt,
-  IconCrown,
   IconArrowUpRight,
   IconUserPlus,
 } from '@tabler/icons-react'
@@ -23,7 +20,6 @@ import { OnboardingChecklist } from '@/components/shared/onboarding-checklist'
 import { AdminDashboardTour } from '@/components/tours/admin-dashboard-tour'
 import { getUiState } from '@/lib/supabase/ui-state'
 import { isTourCompleted, areToursEnabled, isChecklistDismissed, checklistStateKey } from '@/lib/ui-state-keys'
-import { netOfRefunds } from '@/lib/payments/payouts-owed'
 import { getSchoolJoinUrl } from '@/app/actions/admin/invitations'
 
 export default async function AdminDashboardPage({
@@ -53,11 +49,6 @@ export default async function AdminDashboardPage({
     { data: firstCourseRows },
     { data: readyCourseRows },
     { count: publishedLessons },
-    { count: totalEnrollments },
-    { count: totalTransactions },
-    { count: pendingPaymentRequests },
-    { count: activeSubscriptions },
-    { data: recentTransactions },
     { data: recentTenantUsers },
     uiState,
   ] = await Promise.all([
@@ -96,24 +87,6 @@ export default async function AdminDashboardPage({
       .select('*', { count: 'exact', head: true })
       .eq('tenant_id', tenantId)
       .eq('status', 'published'),
-    supabase.from('enrollments').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId),
-    supabase.from('transactions').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId),
-    supabase
-      .from('payment_requests')
-      .select('*', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId)
-      .in('status', ['pending', 'contacted', 'payment_received']),
-    supabase
-      .from('subscriptions')
-      .select('*', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId)
-      .eq('subscription_status', 'active'),
-    supabase
-      .from('transactions')
-      .select('transaction_id, amount, status, transaction_date, user_id')
-      .eq('tenant_id', tenantId)
-      .order('transaction_date', { ascending: false })
-      .limit(5),
     supabase
       .from('tenant_users')
       .select('user_id, created_at, profiles(id, full_name)')
@@ -132,43 +105,21 @@ export default async function AdminDashboardPage({
     profiles: { id: string; full_name: string | null } | null
   }>
 
-  // Batch-fetch user profiles for transactions (avoids N+1)
-  const transactionUserIds = [...new Set((recentTransactions || []).map(t => t.user_id).filter(Boolean))]
-  const { data: transactionProfiles } = transactionUserIds.length > 0
-    ? await supabase.from('profiles').select('id, full_name').in('id', transactionUserIds)
-    : { data: [] }
-  const profileMap = new Map((transactionProfiles || []).map(p => [p.id, p]))
-  const transactionsWithUsers = (recentTransactions || []).map(t => ({
-    ...t,
-    user: profileMap.get(t.user_id) || null,
-  }))
-
-  // Parallelize post-stats queries
   const adminClient = createAdminClient()
   const [
-    { data: successfulTransactions },
     { data: tenant },
     { count: studentCount },
     { data: onboardingSettings },
   ] = await Promise.all([
-    supabase.from('transactions').select('amount, refunded_amount')
-      .eq('tenant_id', tenantId).eq('status', 'successful'),
-    adminClient.from('tenants').select('plan, stripe_account_id')
+    adminClient.from('tenants').select('plan')
       .eq('id', tenantId).single(),
     adminClient.from('tenant_users').select('*', { count: 'exact', head: true })
       .eq('tenant_id', tenantId).eq('role', 'student').eq('status', 'active'),
     supabase.from('tenant_settings').select('setting_key, setting_value')
       .eq('tenant_id', tenantId)
-      .in('setting_key', ['site_name', 'theme_preset', 'logo_url', 'manual_payment_instructions']),
+      .in('setting_key', ['site_name', 'theme_preset', 'logo_url']),
   ])
 
-  // Net of refunds (#547). A PARTIALLY refunded sale stays 'successful' and
-  // carries the slice in `refunded_amount`, so summing `amount` alone would
-  // count money the school gave back. Only a FULL refund leaves this filter.
-  const totalRevenue =
-    successfulTransactions?.reduce((sum, t) => sum + netOfRefunds(t.amount || 0, t.refunded_amount), 0) || 0
-
-  // platformPlan depends on tenant.plan -- must be sequential
   const planSlug = tenant?.plan || 'free'
   const { data: platformPlan } = await adminClient
     .from('platform_plans')
@@ -183,8 +134,6 @@ export default async function AdminDashboardPage({
   )
   const currentSettings = { site_name: settingsByKey.get('site_name') }
   const hasBranding = settingsByKey.has('theme_preset') || settingsByKey.has('logo_url')
-  const isStripeConnected = Boolean(tenant?.stripe_account_id)
-  const hasConfiguredPayments = isStripeConnected || settingsByKey.has('manual_payment_instructions')
   const firstCourse = firstCourseRows?.[0]
   const firstCourseLessonCount = firstCourse?.lessons?.length ?? 0
   const firstReadyCourse = readyCourseRows?.[0]
@@ -208,30 +157,11 @@ export default async function AdminDashboardPage({
       link: '/dashboard/admin/users',
     },
     {
-      title: t('stats.activeSubscriptions'),
-      value: activeSubscriptions || 0,
-      icon: IconCrown,
-      link: '/dashboard/admin/subscriptions',
-    },
-    {
       title: t('stats.totalCourses'),
       value: totalCourses || 0,
       subtitle: t('stats.published', { count: publishedCourses || 0 }),
       icon: IconBook,
       link: '/dashboard/admin/courses',
-    },
-    {
-      title: t('stats.pendingPayments'),
-      value: pendingPaymentRequests || 0,
-      icon: IconReceipt,
-      link: '/dashboard/admin/payment-requests',
-    },
-    {
-      title: t('stats.totalRevenue'),
-      value: new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD' }).format(totalRevenue),
-      subtitle: t('stats.transactions', { count: totalTransactions || 0 }),
-      icon: IconCurrencyDollar,
-      link: '/dashboard/admin/transactions',
     },
   ]
 
@@ -311,14 +241,6 @@ export default async function AdminDashboardPage({
             },
           },
           {
-            id: 'connect-payments',
-            label: t('onboarding.connectPayments'),
-            description: t('onboarding.connectPaymentsDesc'),
-            href: '/dashboard/admin/settings?tab=payment',
-            completed: hasConfiguredPayments,
-            timeHint: t('onboarding.connectPaymentsTime'),
-          },
-          {
             id: 'brand-school',
             label: t('onboarding.brandSchool'),
             description: t('onboarding.brandSchoolDesc'),
@@ -374,16 +296,10 @@ export default async function AdminDashboardPage({
             limit={planLimits.max_students ?? 50}
           />
         </div>
-        <Link href="/dashboard/admin/billing/upgrade">
-          <Button variant={planSlug === 'free' ? 'default' : 'outline'} size="sm" className="gap-1.5">
-            {planSlug === 'free' ? t('plan.upgrade') : t('plan.changePlan')}
-            <IconArrowUpRight className="h-3.5 w-3.5" />
-          </Button>
-        </Link>
       </div>
 
       {/* Stats Grid — clean, no color noise */}
-      <div data-tour="admin-stats" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5" data-testid="admin-stats-grid">
+      <div data-tour="admin-stats" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2" data-testid="admin-stats-grid">
         {stats.map((stat) => (
           <Link key={stat.title} href={stat.link} className="group">
             <Card className="transition-colors hover:bg-muted/50">
@@ -408,8 +324,6 @@ export default async function AdminDashboardPage({
         ))}
       </div>
 
-      {/* Recent Activity Grid */}
-      <div className="grid gap-6 lg:grid-cols-2">
         {/* Recent Users */}
         <Card>
           <CardHeader>
@@ -458,77 +372,6 @@ export default async function AdminDashboardPage({
             </div>
           </CardContent>
         </Card>
-
-        {/* Recent Transactions */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <IconCurrencyDollar className="h-4 w-4 text-muted-foreground" />
-                <span>{t('recentActivity.transactions')}</span>
-              </div>
-              <Link href="/dashboard/admin/transactions">
-                <Button variant="ghost" size="sm" className="gap-1 text-xs text-muted-foreground">
-                  {t('recentActivity.viewAll')}
-                  <IconArrowUpRight className="h-3 w-3" />
-                </Button>
-              </Link>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-1">
-              {transactionsWithUsers && transactionsWithUsers.length > 0 ? (
-                transactionsWithUsers.map((transaction) => (
-                  <div
-                    key={transaction.transaction_id}
-                    className="flex items-center justify-between rounded-lg px-3 py-2.5 transition-colors hover:bg-muted/50"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium">
-                        {transaction.user?.full_name || t('recentActivity.unknown')}
-                      </p>
-                      <p className="truncate text-[11px] text-muted-foreground tabular-nums">
-                        {new Date(transaction.transaction_date).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div className="ml-4 text-right">
-                      <p className="text-sm font-semibold tabular-nums">
-                        {new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD' }).format(transaction.amount)}
-                      </p>
-                      <Badge
-                        variant={
-                          transaction.status === 'successful'
-                            ? 'default'
-                            : transaction.status === 'pending'
-                              ? 'secondary'
-                              : 'destructive'
-                        }
-                        className={`text-[9px] ${transaction.status === 'successful'
-                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400'
-                          : transaction.status === 'pending'
-                            ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400'
-                            : ''
-                          }`}
-                      >
-                        {t(`recentActivity.status.${transaction.status}`)}
-                      </Badge>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="flex flex-col items-center justify-center py-10 text-center">
-                  <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-muted">
-                    <IconCurrencyDollar className="h-5 w-5 text-muted-foreground/60" />
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {t('recentActivity.noTransactions')}
-                  </p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   )
 }
