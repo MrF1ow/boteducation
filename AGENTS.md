@@ -93,13 +93,13 @@ The MCP server uses **HTTP Proxy Authentication**:
 
 2. **Configure environment**: Ensure `.env` has Supabase credentials and shared secret
 
-3. **Connect Claude**: Add MCP server in Claude settings at `http://localhost:3001/mcp`
+3. **Connect a Grok professor**: paste `https://<domain>/api/mcp` plus a bearer PAT. How-to: [`docs/MCP_SETUP.md`](docs/MCP_SETUP.md)
 
 ### Available Capabilities
 
-- **27 tools** for course/lesson/exam/exercise management
-- **3 resources** for accessing course, lesson, and exam data
-- **4 prompts** for guided content creation
+- Professor homework tools listed in [`docs/MCP_SETUP.md`](docs/MCP_SETUP.md) (`PROFESSOR_TOOL_OPTIONS`)
+- Additional course, lesson, exam, exercise, and student-learning tools under `mcp-server/src/tools/`
+- Interactive widgets under `mcp-server/resources/`
 - **Full audit trail** in `mcp_audit_log` table
 
 ### Documentation

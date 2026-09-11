@@ -4,11 +4,10 @@ Thanks for considering a contribution. This is a real, running product, so the b
 
 ## Ways to help
 
-- **Good first issues** — [`good first issue`](https://github.com/guillermoscript/lms-front/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) and [`help wanted`](https://github.com/guillermoscript/lms-front/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22)
+- **Good first issues** — [`good first issue`](https://github.com/MrF1ow/boteducation/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) and [`help wanted`](https://github.com/MrF1ow/boteducation/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22)
 - **Bugs** — open an issue with the tenant, role, and steps to reproduce
 - **Translations** — `messages/en.json` and `messages/es.json`; new locales welcome
 - **Docs** — anything in `docs/` that was wrong or missing when you set up
-- **Payment providers** — the provider contract lives in `lib/payments/` (see `docs/PROVIDER_AGNOSTIC_PAYMENTS_SPIKE.md`)
 
 ## Setup
 
@@ -36,7 +35,7 @@ Before pushing:
 npm run typecheck
 npm run test:unit
 npm run build          # catches what typecheck alone misses
-npx playwright test    # if you touched auth, tenancy, or payments
+npx playwright test    # if you touched auth, tenancy, homework, or MCP
 ```
 
 ## What reviewers look for
@@ -67,4 +66,4 @@ Do not open a public issue for a vulnerability. See [SECURITY.md](SECURITY.md).
 
 ## Questions
 
-Open a [Discussion](https://github.com/guillermoscript/lms-front/discussions) or comment on the issue you want to pick up.
+Open a [Discussion](https://github.com/MrF1ow/boteducation/discussions) or comment on the issue you want to pick up.

@@ -2,7 +2,7 @@
 
 ## What is this?
 
-A multi-tenant SaaS Learning Management System. Schools operate as independent tenants on subdomains (`school-slug.platform.com`). Teachers create courses with rich content, students learn with AI assistance, and admins manage billing, users, and analytics. Supports English and Spanish.
+This checkout is **BotEducation**, a self-hosted fork of [lms-front](https://github.com/guillermoscript/lms-front). One school per deploy. Grok professors connect at `/api/mcp`. See [`../README.md`](../README.md) and [`GETTING_STARTED.md`](./GETTING_STARTED.md). The rest of this page still describes the upstream multi-tenant SaaS. Do not treat billing or Stripe as current operator how-tos.
 
 ## Architecture
 
@@ -109,7 +109,7 @@ Manual/offline payment flow: student submits payment request, admin confirms, sy
 - **Aristotle AI Tutor**: context-aware tutoring with course/lesson context and session persistence
 - **Exam grading**: AI-assisted evaluation with detailed feedback
 - **Exercise assistance**: real-time AI help across exercise types
-- **MCP Server**: 27 tools for AI agent integration with the platform
+- **MCP Server**: Grok professors use a bearer PAT at `/api/mcp`. Tool names: [`MCP_SETUP.md`](./MCP_SETUP.md). The sidecar registers more than the professor subset.
 - Provider: Vercel AI SDK with OpenAI (gpt-5-mini)
 
 ### Additional Features

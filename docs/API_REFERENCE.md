@@ -629,14 +629,14 @@ retries).
 
 | | |
 |---|---|
-| **Auth** | Yes (`getUser()` + teacher/admin role via `getUserRole()`) |
-| **Description** | MCP (Model Context Protocol) proxy for browser-based clients. Forwards JSON-RPC 2.0 requests to the internal MCP server. Rate-limited to 100 req/min per user. |
+| **Auth** | Session JWT or a professor PAT. A PAT is minted to a user JWT in `lib/mcp/pat-proxy.ts` (`validate_mcp_api_token` then `mintUserAccessToken`) |
+| **Description** | MCP proxy. Forwards JSON-RPC 2.0 to the sidecar at `MCP_SERVER_URL`. Rate-limited to 100 req/min per user. Grok professors use `Authorization: Bearer <pat>`. |
 
 **Request Body:** JSON-RPC 2.0 object (`jsonrpc`, `method`, `params`, `id`).
 
 **Success Response (200):** JSON-RPC 2.0 response from MCP server.
 
-**Error Responses:** `401` not logged in, `403` not teacher/admin, `429` rate limited, `400` invalid JSON-RPC, `502` MCP server error.
+**Error Responses:** `401` invalid/expired token or not logged in, `403` not teacher/admin, `429` rate limited, `400` invalid JSON-RPC, `502` MCP server error.
 
 ---
 
@@ -644,10 +644,10 @@ retries).
 
 | | |
 |---|---|
-| **Auth** | Bearer token (MCP API token validated via `validate_mcp_api_token` RPC) |
-| **Description** | MCP proxy for CLI tools (e.g. OpenCode). Same as `/api/mcp` but uses API token auth instead of session cookies. Rate-limited to 100 req/min per user. |
+| **Auth** | Same as `POST /api/mcp` (session JWT or professor PAT) |
+| **Description** | Alias of `/api/mcp`. The catch-all rewrites `/cli` to `/mcp`. Same handler, not a PAT-only path. |
 
-**Headers:** `Authorization: Bearer <mcp_api_token>`
+**Headers:** `Authorization: Bearer <mcp_api_token>` or a session JWT.
 
 **Request Body:** JSON-RPC 2.0 object.
 

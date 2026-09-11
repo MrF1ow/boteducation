@@ -7,6 +7,7 @@ The LMS database is built on PostgreSQL 15 via Supabase. As of the latest migrat
 - **User Management**: `profiles` (global), `user_roles`, `roles`, `permissions`, `role_permissions`
 - **Multi-Tenancy**: `tenants`, `tenant_users`, `tenant_settings`, `tenant_invitations`, `super_admins`, `system_settings`
 - **Course Content**: `courses`, `course_categories`, `lessons`, `lesson_resources`, `lesson_checkpoints`, `lesson_checkpoint_attempts`, `exercises`, `exams`, `exam_questions`, `question_options`, `content_versions`, `lessons_ai_tasks`, `lessons_ai_task_messages`, `prompt_templates`
+- **Homework**: `assignments`, `submissions`, `grades`, `course_professor_bots`, view `course_calendar_items`
 - **Access Control**: **`entitlements`** — the source of truth for course access
 - **Progress**: `enrollments` (progress record only), `lesson_completions`, `lesson_passed`, `lesson_views`, `exam_submissions`, `exam_answers`, `exam_scores`, `exam_question_scores`, `exercise_completions`, `exercise_evaluations`
 - **Commerce**: `products`, `product_courses`, `product_post_registration_steps`, `plans`, `plan_courses`, `transactions`, `subscriptions`, `payment_requests`, `webhook_events`, `tenant_payment_wallets`
@@ -23,7 +24,6 @@ The LMS database is built on PostgreSQL 15 via Supabase. As of the latest migrat
 - **Notifications**: `notifications`, `user_notifications`, `notification_templates`, `notification_preferences`, `device_push_tokens`
 - **API/MCP**: `mcp_api_tokens`, `mcp_audit_log`
 - **Media**: `exercise_media_submissions`, `exercise_files`, `exercise_code_student_submissions`
-- **Legacy / unused**: `assignments`, `submissions`, `grades` — present but not wired into current flows
 
 For the exact current list, don't trust this page — ask the database (see [Verifying this document](#verifying-this-document)).
 
@@ -135,7 +135,7 @@ Per-tenant key-value configuration.
 | `setting_key` | VARCHAR(255) | |
 | `setting_value` | JSONB | |
 
-`UNIQUE(tenant_id, setting_key)`
+`UNIQUE(tenant_id, setting_key)`. Homework uses `auto_publish_grades` (`{"enabled": false}` by default). When enabled, `lms_grade_assignment_submission` writes `grades.published=true`.
 
 #### `tenant_invitations`
 Email invitations to join a school. Checked during `/join-school` flow to auto-assign the invited role.
@@ -413,6 +413,90 @@ Student exam submissions. **Order column is `submission_date`** (NOT `submitted_
 | `ai_model_used` / `ai_processing_time_ms` / `ai_confidence_score` | | Grading telemetry |
 
 Processed by `create_exam_submission()` and `save_exam_feedback()` RPCs.
+
+---
+
+### Homework
+
+Live in this checkout (`supabase/migrations/20260909140000_assignment_homework_schema.sql`). There is no `assignment_grades` table in `lib/database.types.ts`.
+
+#### `assignments`
+
+Homework assignments on a course.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `assignment_id` | INTEGER PK | |
+| `course_id` | INTEGER FK → courses | |
+| `title` | TEXT | |
+| `body` | TEXT | Canonical prompt text |
+| `description` | TEXT | Legacy mirror of `body` (trigger `sync_assignment_legacy_columns`) |
+| `due_at` | TIMESTAMPTZ | Canonical due timestamp |
+| `due_date` | TIMESTAMPTZ | Legacy mirror of `due_at` |
+| `late_policy` | JSONB | `{"kind":"reject"}` default. Kinds `reject`, `accept`, `accept_until`, `penalize` |
+| `max_score` | NUMERIC | Default 100, must be `> 0` |
+| `rubric` | JSONB | |
+| `created_by` | UUID FK → auth.users | |
+| `published` | BOOLEAN | Default true. Students see the assignment only when true. Not the grade visibility flag. |
+
+#### `submissions`
+
+One homework attempt per student per assignment. Unique `(assignment_id, student_id)`.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `submission_id` | INTEGER PK | |
+| `assignment_id` | INTEGER FK → assignments | |
+| `student_id` | UUID | |
+| `body` | TEXT | Text submit |
+| `files` | JSONB | Default `[]`. Student UI is text-only |
+| `submitted_at` | TIMESTAMPTZ | Canonical. `submission_date` is the legacy mirror |
+| `status` | TEXT | `draft`, `submitted`, or `late` |
+
+#### `grades`
+
+Homework scores. FK `grades_submission_id_fkey` points at `submissions` (not `exam_submissions`) in this checkout.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `grade_id` | INTEGER PK | |
+| `submission_id` | INTEGER FK → submissions | `grades_submission_id_fkey` |
+| `student_id` | UUID | |
+| `course_id` | INTEGER FK → courses | |
+| `score` | NUMERIC | Canonical. `grade` is the legacy mirror |
+| `published` | BOOLEAN | Default false. Students `SELECT` a row only when true |
+| `source` | TEXT | `human` or `ai` |
+| `graded_by` | UUID FK → auth.users | |
+
+`auto_publish_grades` on `tenant_settings` controls whether MCP grading writes `published=true` immediately.
+
+#### `course_professor_bots`
+
+Grok professor binding per course. Staff only (`is_staff_of` RLS). Students have no SELECT.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | UUID PK | |
+| `course_id` | INTEGER FK → courses | Unique with `name` |
+| `name` | TEXT | |
+| `system_prompt` | TEXT | |
+| `rubric_rules` | TEXT | |
+| `late_policy` | JSONB | Same kinds as assignments |
+| `model` | TEXT | Default `grok-4` |
+| `tool_allowlist` | TEXT[] | Stored in the UI. `mcp-server/` does not enforce it |
+| `mcp_token_id` | BIGINT FK → mcp_api_tokens | Optional linked PAT |
+
+#### `course_calendar_items` (view)
+
+`security_invoker` view. Union of published-path homework and exams.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `course_id` | INTEGER | |
+| `item_kind` | TEXT | `assignment` or `exam` |
+| `item_id` | INTEGER | `assignment_id` or `exam_id` |
+| `title` | TEXT | |
+| `due_at` | TIMESTAMPTZ | `assignments.due_at` or `exams.exam_date` |
 
 ---
 
@@ -783,7 +867,7 @@ Weekly leagues live in separate tables: `league_tiers` (global tier definitions)
 ### API Tokens
 
 #### `mcp_api_tokens`
-Personal access tokens for CLI/programmatic MCP access.
+Personal access tokens for Grok professors and other programmatic MCP callers.
 
 | Column | Type | Notes |
 |--------|------|-------|
@@ -791,12 +875,16 @@ Personal access tokens for CLI/programmatic MCP access.
 | `user_id` | UUID FK → auth.users | |
 | `token_hash` | TEXT UNIQUE | SHA-256 hash (never stored plaintext) |
 | `name` | TEXT | User-friendly identifier |
+| `course_ids` | INTEGER[] | Null or empty = every course the user staffs |
+| `token_role` | TEXT | `professor` or `admin` |
 | `last_used_at` | TIMESTAMPTZ | |
 | `expires_at` | TIMESTAMPTZ | NULL = never expires |
 | `is_active` | BOOLEAN | |
 | `created_ip` | INET | |
 | `last_used_ip` | INET | |
 | `created_at` | TIMESTAMPTZ | |
+
+`validate_mcp_api_token(token_input text)` returns `user_id`, `email`, `user_role`, `token_id`, `course_ids`, and `token_role`. `lib/mcp/pat-proxy.ts` mints a user JWT from that row.
 
 ---
 
@@ -898,7 +986,7 @@ Manual bank transfer requests for plan upgrades (LATAM schools).
 | `get_gamification_features(_tenant_id uuid)` | Gamification feature flags; reads `platform_plans.features` the same way |
 | `get_tenant_id()` | Resolves the caller's tenant inside RLS policies (JWT claim → anon header → NULL). Fails closed |
 | `get_platform_stats()` | Aggregate platform statistics for the super admin dashboard |
-| `validate_mcp_api_token(token_input text)` | Validates an API token, returns user info |
+| `validate_mcp_api_token(token_input text)` | Validates a PAT. Returns `user_id`, `email`, `user_role`, `token_id`, `course_ids`, `token_role` |
 
 ---
 

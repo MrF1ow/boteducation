@@ -66,7 +66,7 @@ Your Platform (lvh.me or yourdomain.com)
 
 ```bash
 git clone <your-repo>
-cd lms-front
+cd boteducation
 npm install
 ```
 
