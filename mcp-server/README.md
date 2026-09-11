@@ -9,21 +9,33 @@ implementation.
 
 ## Architecture
 
-- **Auth:** Supabase OAuth 2.1 (`oauthSupabaseProvider`). Clients authenticate
-  against Supabase; this server only verifies the resulting JWT.
+- **Auth:** two paths. Supabase OAuth 2.1 (`oauthSupabaseProvider`) for
+  connectors that speak OAuth. Professor PATs on `POST /api/mcp` (and
+  `/api/mcp/cli`) go through `lib/mcp/pat-proxy.ts` in the Next.js app, which
+  validates the token, mints a user JWT, and forwards
+  `Authorization: Bearer <jwt>` plus `X-Mcp-Course-Ids`. This server only
+  verifies the resulting JWT.
 - **Data access:** every tool runs queries with a request-scoped Supabase client
   carrying the caller's access token, so **Postgres RLS enforces tenant
   isolation and ownership**. The server holds no elevated data privileges.
 - **Tenant/role:** read from JWT claims (`tenant_id`, `tenant_role`) injected by
   the LMS `custom_access_token_hook`. `teacher`/`admin` get the management
-  tools; `student` gets only the 30 self-scoped learning/practice tools (list
+  tools; `student` gets self-scoped learning tools (list
   hiding in `src/tool-policy.ts`, call-time gating in `src/register.ts`).
 - **Audit:** an `mcp:tools/call` middleware logs every call to `mcp_audit_log`
   via a service-role client (no-op if `SUPABASE_SERVICE_ROLE_KEY` is unset).
 
 ## What it exposes
 
-- **91 tools** (`lms_*`) across courses, lessons, exercises, exams, analytics,
+Tools are registered in `mcp-server/src/tools/`. The professor homework subset
+is listed in [`docs/MCP_SETUP.md`](../docs/MCP_SETUP.md)
+(`PROFESSOR_TOOL_OPTIONS` in `lib/mcp/professor-tools.ts`). Other files under
+`src/tools/` add course, lesson, exam, exercise, analytics, student-learning,
+practice, certificate, and related tools.
+
+Also still registered, for context (not a fixed inventory):
+
+- **Tools** (`lms_*`) across courses, lessons, exercises, exams, analytics,
   student learning (`lms_my_learning`, `lms_view_lesson`,
   `lms_complete_lesson`, `lms_my_exam_results`, `lms_my_gamification`,
   `lms_browse_catalog`), AI-tutor practice (`lms_get_exercise_for_student`
@@ -129,6 +141,9 @@ docker build -t lms-mcp-server . && docker run -p 3000:3000 --env-file .env lms-
 4. Copy the **publishable key** into `MCP_USE_OAUTH_SUPABASE_PUBLISHABLE_KEY`.
 
 ## Connect from Claude (custom connector)
+
+Grok professors use a bearer PAT on `POST /api/mcp`. See
+[`docs/MCP_SETUP.md`](../docs/MCP_SETUP.md).
 
 Claude (claude.ai or desktop) → **Settings → Connectors → Add custom connector**
 and paste the MCP URL — OAuth discovery, sign-in, and consent are automatic:
