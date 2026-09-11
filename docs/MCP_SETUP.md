@@ -1,437 +1,120 @@
-# MCP Server Setup Guide
+# Connect a Grok professor
 
-## 📋 Overview
+How to paste a BotEducation MCP endpoint into a Grok / xAI remote MCP config so a bot can run a course.
 
-The LMS MCP (Model Context Protocol) Server enables AI assistants like Claude to interact with your LMS system. Teachers and admins can use AI to create courses, manage lessons, generate content, and more.
+## What you get
 
-**Architecture**: HTTP Proxy Authentication
-- **Client**: Claude web interface (claude.ai)
-- **Proxy**: Next.js API route (`/api/mcp`)
-- **MCP Server**: Node.js HTTP server (localhost:3001)
-- **Database**: Supabase with RLS
+Paste `https://<your-domain>/api/mcp` plus a bearer PAT into a Grok / xAI remote MCP config.
 
----
+There is no Grok chat UI in this app. Humans mint a token and bind a bot. The bot calls tools.
 
-## 🔐 Prerequisites
-
-### 1. User Requirements
-- ✅ LMS account with **teacher** or **admin** role
-- ✅ Active session (logged in to LMS)
-
-### 2. System Requirements
-- ✅ Node.js 18+ installed
-- ✅ LMS application running (Next.js dev server or production)
-- ✅ Supabase instance accessible
-
-### 3. Environment Setup
-- ✅ `.env.local` configured with MCP settings (see below)
-- ✅ `mcp-server/.env` configured (see below)
-
----
-
-## ⚙️ Installation
-
-### Step 1: Configure Main LMS Environment
-
-Add these lines to `.env.local` in the root of your LMS project:
-
-```bash
-# MCP Server Configuration
-MCP_SERVER_URL=http://127.0.0.1:3001
-MCP_PROXY_SECRET=<your-secret-here>
+```
+MCP URL
+https://<your-domain>/api/mcp
+Authorization
+Bearer <token>
 ```
 
-**Generate a secure secret**:
-```bash
-openssl rand -hex 32
-```
+## Prerequisites
 
-### Step 2: Configure MCP Server Environment
+You need a running LMS, a reachable Supabase, and a staff login.
 
-Create `mcp-server/.env`:
+1. Start the app with `npm run dev` and open `http://lvh.me:3000` (not `localhost`).
+2. Use local Supabase (`supabase start` then `npm run db:reset`) or a hosted project with the same migrations applied.
+3. Log in as a tenant `admin` or `teacher`. Seeded local admin is `owner@e2etest.com` / `password123`.
 
-```bash
-# Supabase Configuration
-SUPABASE_URL=http://127.0.0.1:54321
-SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-
-# MCP HTTP Server
-MCP_HTTP_PORT=3001
-MCP_HTTP_HOST=127.0.0.1
-
-# Security (must match .env.local)
-MCP_PROXY_SECRET=<same-secret-as-above>
-
-# CORS
-ALLOWED_ORIGIN=http://localhost:3000
-```
-
-**Important**: `MCP_PROXY_SECRET` must be identical in both files!
-
-### Step 3: Build MCP Server
+The Next.js app proxies MCP at `/api/mcp`. Locally the sidecar in `mcp-server/` must still listen on port 3001. Set `MCP_SERVER_URL=http://127.0.0.1:3001` in `.env.local`.
 
 ```bash
 cd mcp-server
+cp .env.example .env
 npm install
-npm run build
+PORT=3001 npm run dev
 ```
 
-### Step 4: Apply Database Migration
+The sidecar defaults to port 3000 and will fight Next. Keep it on 3001. `MCP_PROXY_SECRET` must match in the root `.env.local` and `mcp-server/.env` when that env var is set.
 
-```bash
-# From project root
-supabase db push
+## Create a professor token
 
-# Or if using hosted Supabase
-supabase migration up
+1. Log in locally as `owner@e2etest.com`.
+2. Open **API Tokens** (`/dashboard/admin/api-tokens`).
+3. Create a professor token scoped to a course.
+4. Copy the paste block once. The raw token is shown only at create time.
+
+The block is built by `professorPasteBlock()` in `lib/mcp/token-create.ts`.
+
+```
+MCP URL
+https://<your-domain>/api/mcp
+Authorization
+Bearer <token>
 ```
 
-This creates the `mcp_audit_log` table for tracking all MCP actions.
-
----
+In the Grok / xAI bot config, add a remote MCP server with that URL and bearer token. On the course settings page, save a professor bot (system prompt, rubric, optional linked token).
 
-## 🚀 Running the MCP Server
+## Auth that actually ships
 
-### Option A: Local Development (Recommended)
+Bearer PAT on `POST /api/mcp` and `POST /api/mcp/cli` (alias). Both hit `app/api/mcp/[[...path]]/route.ts`. `/cli` is rewritten to `/mcp`.
 
-**Terminal 1** - Start Next.js (if not already running):
-```bash
-npm run dev
-```
+`resolvePatProxyHeaders` in `lib/mcp/pat-proxy.ts` does the work.
 
-**Terminal 2** - Start MCP HTTP Server:
-```bash
-cd mcp-server
-npm run start:http
-```
-
-You should see:
-```
-╔════════════════════════════════════════════════════════════╗
-║  LMS MCP HTTP Server                                       ║
-╠════════════════════════════════════════════════════════════╣
-║  Status:   READY                                           ║
-║  Address:  http://127.0.0.1:3001                           ║
-║  Mode:     Proxy Authentication                            ║
-╠════════════════════════════════════════════════════════════╣
-║  Registered:                                               ║
-║    • 27 tools (courses, lessons, exams, etc.)              ║
-║    • 3 resources (course, lesson, exam data)               ║
-║    • 4 prompts (course creation, content gen, etc.)        ║
-╠════════════════════════════════════════════════════════════╣
-║  Security:                                                 ║
-║    ✓ Shared secret validation enabled                      ║
-║    ✓ Per-user authentication required                      ║
-║    ✓ Audit logging enabled                                 ║
-╚════════════════════════════════════════════════════════════╝
-```
-
-### Option B: Using Docker
-
-```bash
-cd mcp-server
-
-# Build Docker image
-npm run docker:build
-
-# Run container
-npm run docker:run
-
-# Stop container
-npm run docker:stop
-```
-
----
-
-## 🌐 Connecting Claude to the MCP Server
-
-### Step 1: Log into LMS
-1. Open your browser
-2. Navigate to `http://localhost:3000`
-3. Log in with a **teacher** or **admin** account
-
-### Step 2: Open Claude
-1. Go to https://claude.ai
-2. Navigate to **Settings** → **Connectors**
-
-### Step 3: Add Custom Connector
-1. Click **"Add custom connector"**
-2. Enter MCP Server URL: `http://localhost:3000/api/mcp`
-3. Click **"Add"**
-
-**Note**: Authentication uses your LMS session cookies automatically!
-
-### Step 4: Configure Tool Permissions
-1. In the Connectors settings, click on your LMS connector
-2. Enable/disable specific tools as needed
-3. Set usage preferences
-
-### Step 5: Test the Connection
-In a new Claude conversation:
-
-**Example prompts**:
-- "List all my courses"
-- "Create a new course about Python basics"
-- "Show me the lessons in course 5"
-- "Generate lesson content about functions in Python"
-
----
-
-## 🔧 Troubleshooting
-
-### Issue: "Unauthorized" Error
-
-**Symptoms**: API returns 401 error
-
-**Solutions**:
-1. ✅ Verify you're logged into the LMS
-2. ✅ Check your session hasn't expired (refresh the page)
-3. ✅ Ensure cookies are enabled in your browser
-
-### Issue: "Forbidden: MCP access requires teacher or admin role"
-
-**Symptoms**: API returns 403 error
-
-**Solutions**:
-1. ✅ Verify your user role — the `tenant_users` table is **authoritative** for roles within a tenant (not just `user_roles`):
-   ```sql
-   -- Check tenant-scoped role (authoritative)
-   SELECT * FROM tenant_users WHERE user_id = '<your-user-id>';
-   -- Check global role (fallback)
-   SELECT * FROM user_roles WHERE user_id = '<your-user-id>';
-   ```
-2. ✅ If you're a student, ask an admin to upgrade your role
-3. ✅ Admins can assign roles via admin dashboard or SQL:
-   ```sql
-   INSERT INTO tenant_users (user_id, tenant_id, role)
-   VALUES ('<user-id>', '<tenant-id>', 'teacher')
-   ON CONFLICT DO NOTHING;
-   ```
-
-### Issue: "Rate limit exceeded"
-
-**Symptoms**: API returns 429 error
-
-**Solutions**:
-1. ✅ Wait 1 minute for the rate limit window to reset
-2. ✅ You're limited to 100 requests per minute
-3. ✅ If you need higher limits, modify `lib/rate-limit.ts`
-
-### Issue: "MCP server error" / Connection Refused
-
-**Symptoms**: API returns 502 error
-
-**Solutions**:
-1. ✅ Check MCP server is running:
-   ```bash
-   curl http://127.0.0.1:3001
-   ```
-2. ✅ Verify `MCP_SERVER_URL` in `.env.local` is correct
-3. ✅ Check MCP server logs for errors
-4. ✅ Restart MCP server:
-   ```bash
-   cd mcp-server && npm run start:http
-   ```
-
-### Issue: "Invalid secret" (401 from MCP server)
-
-**Symptoms**: MCP server rejects requests
-
-**Solutions**:
-1. ✅ Verify `MCP_PROXY_SECRET` matches in both:
-   - `.env.local` (main project)
-   - `mcp-server/.env`
-2. ✅ No spaces or quotes around the secret
-3. ✅ Regenerate secret if needed:
-   ```bash
-   openssl rand -hex 32
-   ```
-
-### Issue: Database Migration Fails
-
-**Symptoms**: Can't create `mcp_audit_log` table
-
-**Solutions**:
-1. ✅ Check Supabase connection:
-   ```bash
-   supabase db pull
-   ```
-2. ✅ Verify migration file exists:
-   ```bash
-   ls supabase/migrations/*mcp_audit_log*
-   ```
-3. ✅ Manually apply migration:
-   ```bash
-   supabase db push
-   ```
-
----
-
-## 📊 Monitoring & Auditing
-
-### View Audit Logs
-
-**As a Teacher** (view your own actions):
-```sql
-SELECT 
-  created_at,
-  method,
-  tool_name,
-  success,
-  duration_ms
-FROM mcp_audit_log
-WHERE user_id = auth.uid()
-ORDER BY created_at DESC
-LIMIT 50;
-```
-
-**As an Admin** (view all actions):
-```sql
-SELECT 
-  created_at,
-  user_role,
-  tool_name,
-  success,
-  COUNT(*) OVER (PARTITION BY tool_name) as usage_count
-FROM mcp_audit_log
-ORDER BY created_at DESC
-LIMIT 100;
-```
-
-### Hourly Summary View
-
-```sql
-SELECT * FROM mcp_audit_summary
-WHERE hour >= NOW() - INTERVAL '24 hours'
-ORDER BY hour DESC;
-```
-
-### Check Rate Limit Status
-
-Rate limits are per-user and reset every minute. To check current usage:
-- Look at server logs in real-time
-- Or add monitoring via the audit log timestamps
-
----
-
-## 🔒 Security Best Practices
-
-### 1. Keep Secrets Secret
-- ✅ Never commit `.env` or `.env.local` to git
-- ✅ Use different secrets for dev/staging/production
-- ✅ Rotate secrets regularly (monthly recommended)
-
-### 2. Use HTTPS in Production
-- ✅ Never expose MCP server publicly
-- ✅ Always use HTTPS for the Next.js API endpoint
-- ✅ Configure CORS properly (`ALLOWED_ORIGIN`)
-
-### 3. Monitor Audit Logs
-- ✅ Review logs weekly for suspicious activity
-- ✅ Set up alerts for failed authentication attempts
-- ✅ Archive old logs (>90 days) to keep table small
-
-### 4. Principle of Least Privilege
-- ✅ Only grant teacher role when necessary
-- ✅ Admin role should be limited to actual admins
-- ✅ Review user roles quarterly
-
----
-
-## 🚢 Production Deployment
-
-### Remote Deployment Checklist
-
-- [ ] Generate new production secrets
-- [ ] Set `MCP_SERVER_URL` to production URL
-- [ ] Configure `ALLOWED_ORIGIN` to your domain
-- [ ] Use HTTPS for all endpoints
-- [ ] Set up proper firewall rules
-- [ ] Configure monitoring and alerts
-- [ ] Set up log rotation for audit table
-- [ ] Test failover scenarios
-- [ ] Document rollback procedure
-
-### Environment Variables for Production
-
-**Next.js** (`.env.production`):
-```bash
-MCP_SERVER_URL=http://internal-mcp-server:3001
-MCP_PROXY_SECRET=<production-secret>
-```
-
-**MCP Server**:
-```bash
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=<prod-anon-key>
-SUPABASE_SERVICE_ROLE_KEY=<prod-service-key>
-MCP_PROXY_SECRET=<same-production-secret>
-ALLOWED_ORIGIN=https://your-domain.com
-```
-
----
-
-## 📚 Available MCP Tools
-
-The server currently exposes 27 tools across 5 categories (courses, lessons, exercises, exams, analytics). Future tools may cover landing pages, invitations, certificates, and other features as the platform evolves.
-
-### Courses (5 tools)
-- `list_courses` - List your courses
-- `get_course` - Get course details
-- `create_course` - Create new course
-- `update_course` - Update course details
-- `delete_course` - Delete course
-
-### Lessons (6 tools)
-- `list_lessons` - List lessons in course
-- `get_lesson` - Get lesson details
-- `create_lesson` - Create new lesson
-- `update_lesson` - Update lesson content
-- `delete_lesson` - Delete lesson
-- `reorder_lessons` - Change lesson sequence
-
-### Exams (7 tools)
-- `list_exams` - List exams
-- `get_exam` - Get exam details
-- `create_exam` - Create exam with questions
-- `update_exam` - Update exam details
-- `delete_exam` - Delete exam
-- `add_question` - Add question to exam
-- `update_question` - Update exam question
-
-### Exercises (5 tools)
-- `list_exercises` - List exercises
-- `get_exercise` - Get exercise details
-- `create_exercise` - Create new exercise
-- `update_exercise` - Update exercise
-- `delete_exercise` - Delete exercise
-
-### Analytics (4 tools)
-- `get_course_stats` - Course enrollment/completion stats
-- `get_lesson_stats` - Lesson completion stats
-- `get_exam_stats` - Exam submission stats
-- `get_student_progress` - Individual student progress
-
----
-
-## 🤝 Getting Help
-
-- **Issues**: Check troubleshooting section above
-- **Questions**: Contact your LMS administrator
-- **Bugs**: Report to development team
-- **Feature Requests**: Submit via proper channels
-
----
-
-## 📖 Additional Resources
-
-- [MCP Protocol Documentation](https://modelcontextprotocol.io)
-- [Next.js Documentation](https://nextjs.org/docs)
-- [Supabase RLS Guide](https://supabase.com/docs/guides/auth/row-level-security)
-- [Claude MCP Integration](https://support.anthropic.com/en/articles/custom-connectors)
-
----
-
-**Last Updated**: February 2026  
-**Version**: 1.0.0
+1. Call `validate_mcp_api_token` with the raw PAT.
+2. Mint a user JWT via `mintUserAccessToken`.
+3. Forward `Authorization: Bearer <jwt>` and `X-Mcp-Course-Ids` to the sidecar.
+
+`X-User-*` headers are not auth. The proxy deletes a client-supplied `X-Mcp-Course-Ids` and sets it only from a validated PAT.
+
+Session cookies and OAuth connectors are a second path. They are not the Grok path.
+
+## Course scope
+
+Scope lives on `mcp_api_tokens.course_ids`.
+
+Empty or null means every course the user staffs. A non-empty array locks the token to those course ids.
+
+`LmsSession.assertCourseInScope` in `mcp-server/src/session.ts` denies other courses. A scoped token that calls a tool on course 1002 while allowed only `[1001]` gets `Access denied`.
+
+## Grades
+
+`lms_grade_assignment_submission` writes `grades.published=false` unless tenant setting `auto_publish_grades` is on (`tenant_settings.setting_key`, JSON `{ "enabled": true }`). Then call `lms_publish_grade` so the student can read the score.
+
+Students only `SELECT` published grades. RLS on `grades` requires `published = true` for the student row.
+
+`assignments.published` is a different flag. It controls whether students can see the assignment, not whether a grade is visible.
+
+## Professor tools
+
+Names come from `PROFESSOR_TOOL_OPTIONS` in `lib/mcp/professor-tools.ts`. Descriptions come from `mcp-server/src/tools/assignments.ts` and the course, lesson, and exam tools for the first six names. The canonical gradebook tool is `lms_get_gradebook`.
+
+| Tool | Description |
+|--|--|
+| `lms_get_course` | Get detailed information about a course including its lessons, exams, and enrollment count. |
+| `lms_create_lesson` | Create a new lesson in a course in draft status. Optionally schedule auto-publish with publish_at. |
+| `lms_update_lesson` | Update lesson fields like title, content, description, status, or publish_at schedule. |
+| `lms_publish_lesson` | Publish a lesson by setting its status to `published`. |
+| `lms_create_exam` | Create a new exam with optional questions and options in a single call. Recommended for bulk creation. |
+| `lms_update_exam` | Update exam metadata like title, description, duration, or status. |
+| `lms_create_assignment` | Create a homework assignment on a course. `due_at` is ISO-8601. `late_policy` kinds are `reject`, `accept`, `accept_until`, `penalize`. |
+| `lms_update_assignment` | Update a homework assignment's title, body, due date, late policy, or rubric. |
+| `lms_set_deadline` | Set or clear an assignment `due_at` timestamp. |
+| `lms_list_submissions` | List homework submissions for an assignment. |
+| `lms_get_submission` | Get one homework submission by `submission_id`. |
+| `lms_grade_assignment_submission` | Grade a homework submission. Leaves `published=false` unless tenant `auto_publish_grades` is on. Call `lms_publish_grade` to release a draft. |
+| `lms_publish_grade` | Publish a draft homework grade so the student can read the score. |
+| `lms_post_announcement` | Post an in-app course announcement. Does not send email. |
+| `lms_get_gradebook` | List homework grades and exam scores for a course. |
+| `lms_list_roster` | List students enrolled in a course. Alias of the enrollment roster. |
+
+The sidecar registers more tools under `mcp-server/src/tools/`. A professor PAT is still bound by course scope and staff RLS.
+
+## Gotchas
+
+- Bot `tool_allowlist` on `course_professor_bots` is stored in the UI. `mcp-server/` does not enforce it.
+- Live e2e `tests/playwright/homework-happy-path.spec.ts` skips without `PROFESSOR_PAT` or `/tmp/professor-pat.txt`.
+- Student submit is text only. File uploads are stored as `files: []`.
+
+## Optional Claude OAuth
+
+Claude custom connectors can still use session cookies or Supabase OAuth against `/api/mcp`. Dashboard → API Tokens still shows a Claude connector card.
+
+That path is not how you connect a Grok professor. Use the bearer PAT on `POST /api/mcp`.

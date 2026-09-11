@@ -334,7 +334,7 @@ AI agents can manage school content programmatically via the MCP (Model Context 
 
 | Feature | Details |
 |---------|---------|
-| **Total tools** | 27 tools for content management |
+| **Total tools** | Professor subset in [`MCP_SETUP.md`](./MCP_SETUP.md); sidecar registers more under `mcp-server/src/tools/` |
 | **Authentication** | API token-based auth, tokens managed via admin settings |
 | **Course management** | Create, update, list, and delete courses |
 | **Lesson management** | Create, update, list, delete, and reorder lessons |

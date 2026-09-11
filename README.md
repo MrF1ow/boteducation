@@ -10,7 +10,7 @@ BotEducation is a fork of [lms-front](https://github.com/guillermoscript/lms-fro
 [![Supabase](https://img.shields.io/badge/Supabase-Postgres%20%2B%20RLS-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-**Setup:** [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md) · **Contribute:** [`CONTRIBUTING.md`](CONTRIBUTING.md) · **Professor MCP tools:** [`docs/plans/03-mcp-professor.md`](docs/plans/03-mcp-professor.md)
+**Setup:** [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md) · **Contribute:** [`CONTRIBUTING.md`](CONTRIBUTING.md) · **Professor MCP tools:** [`docs/MCP_SETUP.md`](docs/MCP_SETUP.md)
 
 **Stack:** Next.js 16 App Router · TypeScript · Supabase (Postgres + Auth + RLS) · MCP at `/api/mcp`
 
@@ -94,7 +94,7 @@ Self-host one school on your own machines. The MIT license covers that use. Comm
    Bearer <token>
    ```
 
-   In the Grok / xAI bot config, add a remote MCP server with that URL and bearer token. On the course settings page, save a professor bot (system prompt, rubric, optional linked token). Tool names live in [`docs/plans/03-mcp-professor.md`](docs/plans/03-mcp-professor.md).
+   In the Grok / xAI bot config, add a remote MCP server with that URL and bearer token. On the course settings page, save a professor bot (system prompt, rubric, optional linked token). Tool names live in [`docs/MCP_SETUP.md`](docs/MCP_SETUP.md).
 
 **Full walkthrough — seed contents, migrations, tests, optional services, troubleshooting: [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md).**
 
@@ -116,11 +116,10 @@ Self-host one school on your own machines. The MIT license covers that use. Comm
 ## Documentation
 
 - [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md) — **full local setup guide: env, seed data, migrations, tests, troubleshooting**
-- [`docs/plans/03-mcp-professor.md`](docs/plans/03-mcp-professor.md) — professor MCP tools
+- [`docs/MCP_SETUP.md`](docs/MCP_SETUP.md) — connect a Grok professor (PAT at `/api/mcp`) and professor tool names
 - [`CLAUDE.md`](CLAUDE.md) — architecture reference for AI agents and developers
 - [`docs/DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md) — complete DB schema
 - [`docs/AUTH.md`](docs/AUTH.md) — authentication flows
-- [`docs/MCP_SETUP.md`](docs/MCP_SETUP.md) — the MCP server
 
 More in [`docs/`](docs/).
 

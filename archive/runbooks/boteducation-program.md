@@ -1,4 +1,15 @@
-# BotEducation program plan
+# BotEducation program (archived)
+
+Historical pstack runbook. Not operator documentation.
+
+Implementation landed on `master` in [MrF1ow/boteducation#10](https://github.com/MrF1ow/boteducation/pull/10) (`e9708b31`). Operator docs live in `README.md`, `docs/GETTING_STARTED.md`, and `docs/MCP_SETUP.md`.
+
+**How boxes were marked.** Files, Build, and You see are checked when the matching code exists in that commit. Verify unit is checked when a test file exists, even if it only covers helpers. Verify live and Verify perf stay unchecked: the ten-lane screenshots and perf receipts were never stored in the repo. Merge is checked only for "the operator lands it", which happened as GitHub PR #10. Arm / spawn / pstack cadence boxes stay unchecked because that process did not run here.
+
+**Still open after #10.** Student submit is text only (`files: []`). `course_professor_bots.tool_allowlist` is stored in admin UI and is not read by `mcp-server/`. `lms_list_grades` was never added; use `lms_get_gradebook`. Payment route files still redirect or return 410; leftover payment modules may remain. Token page still shows a Claude connector card. Playwright `homework-happy-path.spec.ts` skips unless `PROFESSOR_PAT` or `/tmp/professor-pat.txt` is set.
+
+---
+
 
 BotEducation turns a fork of lms-front into a self-hosted school where Grok bots run courses through MCP.
 Operators clone it, run Next.js on their Supabase, and paste `/api/mcp` into a Grok bot.
@@ -14,7 +25,7 @@ The program runs `pstack/skills/poteto-mode/playbooks/autopilot-stack.md`. The o
 
 Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked.
 
-How-to files the owner reads before coding are `docs/plans/00-fork-and-baseline.md` through `docs/plans/06-readme.md`.
+How-to files the owner reads before coding are `docs/plans/00-fork-and-baseline.md` through `docs/plans/06-readme.md`. Those files were deleted after this archive. The quotes below are historical.
 
 ## Program checklist
 
@@ -76,21 +87,21 @@ Each live lane runs on its own cloud VM at the PR head. Drive through `control-u
 
 **Files.**
 
-- [ ] Edit `README.md`.
-- [ ] Edit `.env.example`.
-- [ ] Create nothing else unless `package.json` name change is proven safe.
+- [x] Edit `README.md`.
+- [x] Edit `.env.example`.
+- [x] Create nothing else unless `package.json` name change is proven safe.
 
 **Build.**
 
-- [ ] Point the README at self-host and credit lms-front. Do not delete commerce code.
+- [x] Point the README at self-host and credit lms-front. Do not delete commerce code.
 
 **You see.**
 
-- [ ] README title names BotEducation and lms-front. `git log --oneline | wc -l` is still thousands.
+- [x] README title names BotEducation and lms-front. `git log --oneline | wc -l` is still thousands.
 
 **Verify, unit.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked.
 
-- [ ] `npm run typecheck` at the PR head. Log in `receipts/pr-00-typecheck.txt`.
+- [x] `npm run typecheck` at the PR head. Log in `receipts/pr-00-typecheck.txt`.
 
 **Verify, live.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked. Ten lanes on `grok-4.6-fast-xhigh` at the PR head, per the boot recipe.
 
@@ -119,7 +130,7 @@ Each live lane runs on its own cloud VM at the PR head. Drive through `control-u
 - [ ] Root's clean verdict at the exact head SHA.
 - [ ] Bugbot triage done.
 - [ ] Rebased onto current trunk after the verdict, patch-id unchanged.
-- [ ] Root appends it to the stack. The operator lands it.
+- [x] Root appends it to the stack. The operator lands it.
 
 ## Extend the assignment schema (PR-02)
 
@@ -127,20 +138,20 @@ Each live lane runs on its own cloud VM at the PR head. Drive through `control-u
 
 **Files.**
 
-- [ ] Create `supabase/migrations/` additive migration for assignments, submissions, grades, professor bots, token columns, calendar view.
-- [ ] Edit `lib/database.types.ts` after generate, or the migration only if types are generated in CI.
+- [x] Create `supabase/migrations/` additive migration for assignments, submissions, grades, professor bots, token columns, calendar view.
+- [x] Edit `lib/database.types.ts` after generate, or the migration only if types are generated in CI.
 
 **Build.**
 
-- [ ] Add the columns and tables named in `docs/plans/02-data-model.md`. Enable RLS on every new table.
+- [x] Add the columns and tables named in `docs/plans/02-data-model.md`. Enable RLS on every new table.
 
 **You see.**
 
-- [ ] `npm run db:reset` applies. Staff insert into `assignments` succeeds. Student select of unpublished `grades` returns zero rows.
+- [x] `npm run db:reset` applies. Staff insert into `assignments` succeeds. Student select of unpublished `grades` returns zero rows.
 
 **Verify, unit.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked.
 
-- [ ] SQL tests or a Vitest RLS helper that inserts as student and staff. Run `npm run test:unit` for any new cases.
+- [x] SQL tests or a Vitest RLS helper that inserts as student and staff. Run `npm run test:unit` for any new cases.
 
 **Verify, live.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked. Ten lanes on `grok-4.6-fast-xhigh` at the PR head, per the boot recipe.
 
@@ -169,7 +180,7 @@ Each live lane runs on its own cloud VM at the PR head. Drive through `control-u
 - [ ] Root's clean verdict at the exact head SHA.
 - [ ] Bugbot triage done.
 - [ ] Rebased onto current trunk after the verdict, patch-id unchanged.
-- [ ] Root appends it to the stack. The operator lands it.
+- [x] Root appends it to the stack. The operator lands it.
 
 ## Expand the professor MCP (PR-03)
 
@@ -177,22 +188,22 @@ Each live lane runs on its own cloud VM at the PR head. Drive through `control-u
 
 **Files.**
 
-- [ ] Edit `app/api/mcp/[[...path]]/route.ts`.
-- [ ] Edit `mcp-server/index.ts` and `mcp-server/src/register.ts`.
-- [ ] Create `mcp-server/src/tools/assignments.ts` (name may vary, one module).
-- [ ] Create matching Vitest files under `mcp-server/`.
+- [x] Edit `app/api/mcp/[[...path]]/route.ts`.
+- [x] Edit `mcp-server/index.ts` and `mcp-server/src/register.ts`.
+- [x] Create `mcp-server/src/tools/assignments.ts` (name may vary, one module).
+- [x] Create matching Vitest files under `mcp-server/`.
 
 **Build.**
 
-- [ ] Accept Bearer on `/api/mcp`. Add the professor tools listed in `docs/plans/03-mcp-professor.md`. Audit every write.
+- [x] Accept Bearer on `/api/mcp`. Add the professor tools listed in `docs/plans/03-mcp-professor.md`. Audit every write.
 
 **You see.**
 
-- [ ] `POST /api/mcp` with a professor token lists `lms_create_assignment`. A grade call leaves `published` false.
+- [x] `POST /api/mcp` with a professor token lists `lms_create_assignment`. A grade call leaves `published` false.
 
 **Verify, unit.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked.
 
-- [ ] `mcp-server` Vitest cases for create, draft grade, publish, and course-scope deny. Run `npm test` in `mcp-server/`.
+- [x] `mcp-server` Vitest cases for create, draft grade, publish, and course-scope deny. Run `npm test` in `mcp-server/`.
 
 **Verify, live.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked. Ten lanes on `grok-4.6-fast-xhigh` at the PR head, per the boot recipe.
 
@@ -221,7 +232,7 @@ Each live lane runs on its own cloud VM at the PR head. Drive through `control-u
 - [ ] Root's clean verdict at the exact head SHA.
 - [ ] Bugbot triage done.
 - [ ] Rebased onto current trunk after the verdict, patch-id unchanged.
-- [ ] Root appends it to the stack. The operator lands it.
+- [x] Root appends it to the stack. The operator lands it.
 
 ## Ship student Canvas views (PR-04)
 
@@ -229,21 +240,21 @@ Each live lane runs on its own cloud VM at the PR head. Drive through `control-u
 
 **Files.**
 
-- [ ] Edit `app/[locale]/dashboard/student/courses/[courseId]/page.tsx`.
-- [ ] Create assignment, grades, and calendar routes under `app/[locale]/dashboard/student/`.
-- [ ] Create student submit actions that use the session Supabase client.
+- [x] Edit `app/[locale]/dashboard/student/courses/[courseId]/page.tsx`.
+- [x] Create assignment, grades, and calendar routes under `app/[locale]/dashboard/student/`.
+- [x] Create student submit actions that use the session Supabase client.
 
 **Build.**
 
-- [ ] Course home, assignment detail with submit, published grades, calendar from `course_calendar_items`.
+- [x] Course home, assignment detail with submit, published grades, calendar from `course_calendar_items`.
 
 **You see.**
 
-- [ ] Seeded student can submit text to an assignment and see a published grade only after publish.
+- [x] Seeded student can submit text to an assignment and see a published grade only after publish.
 
 **Verify, unit.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked.
 
-- [ ] Playwright or Vitest for submit and unpublished-hidden. Run `npm run test:unit` plus a focused Playwright file if added.
+- [x] Playwright or Vitest for submit and unpublished-hidden. Run `npm run test:unit` plus a focused Playwright file if added.
 
 **Verify, live.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked. Ten lanes on `grok-4.6-fast-xhigh` at the PR head, per the boot recipe.
 
@@ -276,7 +287,7 @@ Each live lane runs on its own cloud VM at the PR head. Drive through `control-u
 - [ ] Root's clean verdict at the exact head SHA.
 - [ ] Bugbot triage done.
 - [ ] Rebased onto current trunk after the verdict, patch-id unchanged.
-- [ ] Root appends it to the stack. The operator lands it.
+- [x] Root appends it to the stack. The operator lands it.
 
 ## Bind professor bots in admin (PR-05)
 
@@ -284,21 +295,21 @@ Each live lane runs on its own cloud VM at the PR head. Drive through `control-u
 
 **Files.**
 
-- [ ] Edit `app/[locale]/dashboard/teacher/api-tokens/page.tsx` and admin twin.
-- [ ] Edit `app/actions/mcp-tokens.ts` and `components/dashboard/api-tokens-page`.
-- [ ] Edit course settings and admin settings for bots and `auto_publish_grades`.
+- [x] Edit `app/[locale]/dashboard/teacher/api-tokens/page.tsx` and admin twin.
+- [x] Edit `app/actions/mcp-tokens.ts` and `components/dashboard/api-tokens-page`.
+- [x] Edit course settings and admin settings for bots and `auto_publish_grades`.
 
 **Build.**
 
-- [ ] Paste block for `/api/mcp`. Course-scoped professor token. Bot prompt fields. Auto-publish toggle.
+- [x] Paste block for `/api/mcp`. Course-scoped professor token. Bot prompt fields. Auto-publish toggle.
 
 **You see.**
 
-- [ ] Admin copies URL `https://<domain>/api/mcp` and a one-time token. Toggle off keeps MCP grades unpublished.
+- [x] Admin copies URL `https://<domain>/api/mcp` and a one-time token. Toggle off keeps MCP grades unpublished.
 
 **Verify, unit.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked.
 
-- [ ] Action tests that createToken persists `course_ids` and never logs the raw token. Run `npm run test:unit`.
+- [x] Action tests that createToken persists `course_ids` and never logs the raw token. Run `npm run test:unit`.
 
 **Verify, live.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked. Ten lanes on `grok-4.6-fast-xhigh` at the PR head, per the boot recipe.
 
@@ -331,7 +342,7 @@ Each live lane runs on its own cloud VM at the PR head. Drive through `control-u
 - [ ] Root's clean verdict at the exact head SHA.
 - [ ] Bugbot triage done.
 - [ ] Rebased onto current trunk after the verdict, patch-id unchanged.
-- [ ] Root appends it to the stack. The operator lands it.
+- [x] Root appends it to the stack. The operator lands it.
 
 ## Disable then delete commerce (PR-01)
 
@@ -339,21 +350,21 @@ Each live lane runs on its own cloud VM at the PR head. Drive through `control-u
 
 **Files.**
 
-- [ ] Edit student, teacher, and admin nav to drop commerce links.
-- [ ] Delete or redirect `app/[locale]/platform/**` and payment dashboards after grep is clean.
-- [ ] Edit `mcp-server/index.ts` to stop registering landing-page tools when those files go.
+- [x] Edit student, teacher, and admin nav to drop commerce links.
+- [x] Delete or redirect `app/[locale]/platform/**` and payment dashboards after grep is clean.
+- [x] Edit `mcp-server/index.ts` to stop registering landing-page tools when those files go.
 
 **Build.**
 
-- [ ] Follow `docs/plans/01-strip-saas.md`. Disable first. Delete only with typecheck green.
+- [x] Follow `docs/plans/01-strip-saas.md`. Disable first. Delete only with typecheck green.
 
 **You see.**
 
-- [ ] Student shell has no store. Admin shell has no payouts. Login still works.
+- [x] Student shell has no store. Admin shell has no payouts. Login still works.
 
 **Verify, unit.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked.
 
-- [ ] `npm run typecheck`. Drop or rewrite tests that targeted checkout. Run `npm run test:unit`.
+- [x] `npm run typecheck`. Drop or rewrite tests that targeted checkout. Run `npm run test:unit`.
 
 **Verify, live.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked. Ten lanes on `grok-4.6-fast-xhigh` at the PR head, per the boot recipe.
 
@@ -386,7 +397,7 @@ Each live lane runs on its own cloud VM at the PR head. Drive through `control-u
 - [ ] Root's clean verdict at the exact head SHA.
 - [ ] Bugbot triage done.
 - [ ] Rebased onto current trunk after the verdict, patch-id unchanged.
-- [ ] Root appends it to the stack. The operator lands it.
+- [x] Root appends it to the stack. The operator lands it.
 
 ## Rewrite the self-host README (PR-06)
 
@@ -394,20 +405,20 @@ Each live lane runs on its own cloud VM at the PR head. Drive through `control-u
 
 **Files.**
 
-- [ ] Edit `README.md`.
-- [ ] Edit `.env.example` comments if PR-01 did not already.
+- [x] Edit `README.md`.
+- [x] Edit `.env.example` comments if PR-01 did not already.
 
 **Build.**
 
-- [ ] Short self-host plus Grok MCP paste. Credit lms-front. No marketing site.
+- [x] Short self-host plus Grok MCP paste. Credit lms-front. No marketing site.
 
 **You see.**
 
-- [ ] README clone commands use `boteducation`. Grok section names `/api/mcp`.
+- [x] README clone commands use `boteducation`. Grok section names `/api/mcp`.
 
 **Verify, unit.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked.
 
-- [ ] `rg -n "Stripe Connect" README.md` is empty or only a historical credit. Save the rg output.
+- [x] `rg -n "Stripe Connect" README.md` is empty or only a historical credit. Save the rg output.
 
 **Verify, live.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked. Ten lanes on `grok-4.6-fast-xhigh` at the PR head, per the boot recipe.
 
@@ -436,7 +447,7 @@ Each live lane runs on its own cloud VM at the PR head. Drive through `control-u
 - [ ] Root's clean verdict at the exact head SHA.
 - [ ] Bugbot triage done.
 - [ ] Rebased onto current trunk after the verdict, patch-id unchanged.
-- [ ] Root appends it to the stack. The operator lands it.
+- [x] Root appends it to the stack. The operator lands it.
 
 ## Close the program
 

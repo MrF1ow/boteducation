@@ -4,9 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Multi-tenant SaaS LMS built with Next.js 16 (App Router, React 19) and Supabase. Schools operate as independent tenants on subdomains (`school-slug.platform.com`). The platform uses **RLS for data security** — database queries go directly from components, not through server actions.
+BotEducation is a self-hosted school LMS built with Next.js 16 (App Router, React 19) and Supabase. One school per deploy. Grok professors connect over MCP at `/api/mcp`. Local login still uses `lvh.me` tenant subdomains. The platform uses **RLS for data security** — database queries go directly from components, not through server actions.
 
-**Stack:** Next.js 16.1.5 · Supabase (PostgreSQL 15, Auth, Storage) · Shadcn UI (base-mira) · Tailwind CSS v4 · TypeScript strict · Stripe Connect · next-intl (en/es)
+**Stack:** Next.js 16.1.5 · Supabase (PostgreSQL 15, Auth, Storage) · Shadcn UI (base-mira) · Tailwind CSS v4 · TypeScript strict · Grok professors over MCP · next-intl (en/es)
+
+Stripe Connect is leftover and disabled in this fork. Commerce routes redirect or return 410. Homework tables are live. Professor PAT auth is `lib/mcp/pat-proxy.ts`.
 
 ## Commands
 
@@ -152,7 +154,7 @@ Limits live in `platform_plans.limits` (JSONB): `free` (5 courses/50 students/10
 
 ## MCP Server
 
-`mcp-server/` exposes LMS course-management tools/resources/prompts/widgets to AI agents, built on **mcp-use** (not raw `@modelcontextprotocol/sdk`). **Read the `mcp-apps-builder` skill before touching it.** Runs standalone on port 3000 (`cd mcp-server && npm run dev`; `npm run mcp:build` from root). Auth is Supabase OAuth 2.1 — every query runs through a request-scoped, RLS-aware client using the caller's token (no service-role data access); role/tenant come from JWT claims, gated per-role in `src/tool-policy.ts`. In production, `app/api/mcp/[[...path]]/route.ts` fronts it at `https://<tenant>.<domain>/api/mcp`. Tool inventory lives in `mcp-server/src/tools/*.ts`, widgets in `mcp-server/resources/<name>/widget.tsx` — read those directly rather than relying on a list here, as they change frequently.
+`mcp-server/` exposes LMS course-management tools/resources/prompts/widgets to AI agents, built on **mcp-use** (not raw `@modelcontextprotocol/sdk`). **Read the `mcp-apps-builder` skill before touching it.** Local sidecar: `cd mcp-server && PORT=3001 npm run dev` (port 3000 fights Next). `npm run mcp:build` from root. Professor PATs are minted to a user JWT by `lib/mcp/pat-proxy.ts` before they reach this server. OAuth JWT and session paths also work. Every query runs through a request-scoped, RLS-aware client using the caller's token (no service-role data access); role/tenant come from JWT claims, gated per-role in `src/tool-policy.ts`. In production, `app/api/mcp/[[...path]]/route.ts` fronts it at `https://<tenant>.<domain>/api/mcp`. Professor how-to: [`docs/MCP_SETUP.md`](docs/MCP_SETUP.md). Tool inventory lives in `mcp-server/src/tools/*.ts`, widgets in `mcp-server/resources/<name>/widget.tsx` — read those directly rather than relying on a list here, as they change frequently.
 
 ## Environment Variables
 

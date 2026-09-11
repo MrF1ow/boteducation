@@ -8,7 +8,11 @@ Target: a working app with real data in ~10 minutes.
 
 ## 1. What you are running
 
-A **multi-tenant SaaS LMS**. One Next.js app serves many schools ("tenants"), each on its own subdomain (`code-academy.lvh.me:3000`). Data is isolated per tenant by Postgres **RLS**, so components query Supabase directly instead of going through an API layer.
+This fork is **BotEducation**. One school per deploy. Self-hosted on your own Next.js and Supabase. It is not a hosted SaaS.
+
+Local login still uses `lvh.me` subdomains and Postgres **RLS**. Data is isolated per tenant, so components query Supabase directly.
+
+Connect a Grok professor with a bearer PAT at `/api/mcp`. See [`docs/MCP_SETUP.md`](./MCP_SETUP.md). Homework lives under student course routes such as `/dashboard/student/courses/<id>/assignments`.
 
 Five things worth knowing before the first run:
 
@@ -32,7 +36,7 @@ Full architecture reference: [`CLAUDE.md`](../CLAUDE.md) · [`docs/PROJECT_OVERV
 | npm | 10+ | The repo uses npm **workspaces** (`packages/*`) — don't swap to pnpm/yarn |
 | Docker Desktop | running | Required by local Supabase |
 | Supabase CLI | 2.80+ | `brew install supabase/tap/supabase` or `npm i -g supabase` |
-| Stripe CLI | optional | Only to test webhooks locally |
+| Stripe CLI | unused in this fork | Commerce URLs redirect to `/dashboard`. Payment APIs return 410. |
 
 Verify:
 
@@ -46,11 +50,11 @@ node --version && npm --version && docker --version && supabase --version
 
 ```bash
 git clone <repo-url>
-cd lms-front
+cd boteducation
 npm install
 ```
 
-`npm install` also links the `@lms/core` workspace in `packages/core` (shared logic with the sibling Expo app). The `mcp-server/` sub-project has its **own** `package.json` and is only needed if you work on MCP — see §10.
+`npm install` also links the `@lms/core` workspace in `packages/core` (shared logic with the sibling Expo app). The `mcp-server/` sub-project has its **own** `package.json`. Local Grok professor work needs that sidecar on 3001. See §11 and [`docs/MCP_SETUP.md`](./MCP_SETUP.md).
 
 ---
 
@@ -287,14 +291,7 @@ Test credentials live in `tests/playwright/utils/constants.ts` (note: the `teach
 
 ### Stripe webhooks
 
-Two independent integrations — student→school payments (Connect) and school→platform billing:
-
-```bash
-stripe listen --forward-to lvh.me:3000/api/stripe/webhook           # → STRIPE_WEBHOOK_SECRET
-stripe listen --forward-to lvh.me:3000/api/billing/webhook/stripe  # → STRIPE_PLATFORM_WEBHOOK_SECRET
-```
-
-Each `stripe listen` prints its own signing secret; they are different values, don't cross them.
+Unused in this fork. Commerce URLs redirect to `/dashboard`. Payment APIs return 410. Do not run `stripe listen`.
 
 ### Cron endpoints
 
@@ -306,14 +303,16 @@ curl -H "Authorization: Bearer $CRON_SECRET" http://lvh.me:3000/api/cron/expire-
 
 ### MCP server
 
-`mcp-server/` is a separate app (mcp-use + Supabase OAuth) exposing LMS tools to AI agents.
+Professor path is `POST /api/mcp` with a bearer PAT. How-to: [`docs/MCP_SETUP.md`](./MCP_SETUP.md).
+
+Locally the sidecar in `mcp-server/` still needs to listen on 3001. Set `MCP_SERVER_URL=http://127.0.0.1:3001` in the root `.env.local`.
 
 ```bash
 cd mcp-server && cp .env.example .env && npm install
 PORT=3001 npm run dev     # inspector at http://localhost:3001/inspector
 ```
 
-It defaults to **port 3000 and will fight the Next dev server** — give it 3001 as above and set `MCP_SERVER_URL=http://localhost:3001` in the root `.env.local`. Read the `mcp-apps-builder` skill before changing anything in there. Details: [`docs/MCP_SETUP.md`](./MCP_SETUP.md).
+It defaults to port 3000 and will fight the Next dev server. Give it 3001 as above. Read the `mcp-apps-builder` skill before changing anything in `mcp-server/`.
 
 ### Cloud Supabase instead of local
 
@@ -395,7 +394,8 @@ proxy.ts               THE middleware — tenant + auth + role routing. Do not a
 | [`CLAUDE.md`](../CLAUDE.md) | Architecture reference + the known-pitfalls list. Read it before your first PR. |
 | [`docs/DATABASE_SCHEMA.md`](./DATABASE_SCHEMA.md) | 65+ tables and their relationships |
 | [`docs/AUTH.md`](./AUTH.md) | Auth flows, JWT hook, role resolution |
-| [`docs/MONETIZATION.md`](./MONETIZATION.md) | School billing, student payments, feature gating |
+| [`docs/MCP_SETUP.md`](./MCP_SETUP.md) | Connect a Grok professor (PAT at `/api/mcp`) |
+| [`docs/MONETIZATION.md`](./MONETIZATION.md) | Leftover. Commerce is unused in this fork |
 | [`docs/DEVELOPMENT_WORKFLOW.md`](./DEVELOPMENT_WORKFLOW.md) | Branching, PRs, review expectations |
 | [`docs/MIGRATIONS.md`](./MIGRATIONS.md) | Writing migrations and RLS policies |
 | [`docs/I18N_GUIDE.md`](./I18N_GUIDE.md) | Adding translatable copy (en/es) |
