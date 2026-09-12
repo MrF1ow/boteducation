@@ -83,12 +83,11 @@ test.describe('Tenant Isolation', () => {
 
   test('platform root (lvh.me) loads', async ({ page }) => {
     await page.goto(`${BASE}/en`)
-    // Derive from BASE rather than hardcoding a port — the dev server may run anywhere.
-    await expect(page).toHaveURL(`${BASE}/en`)
+    await expect(page).toHaveURL(/\/en\/auth\/login/)
   })
 
-  test('subdomain (code-academy.lvh.me) shows Code Academy Pro', async ({ page }) => {
+  test('subdomain (code-academy.lvh.me) sends anonymous visitors to login', async ({ page }) => {
     await page.goto(`${TENANT_BASE}/en`)
-    await expect(page.getByText(/Code Academy Pro/i).first()).toBeVisible({ timeout: 15_000 })
+    await expect(page).toHaveURL(/\/en\/auth\/login/)
   })
 })

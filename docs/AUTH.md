@@ -256,15 +256,12 @@ These routes do not require authentication:
 
 | Route | Description |
 |-------|-------------|
-| `/auth/*` | All auth pages: `login`, `sign-up`, `sign-up-success`, `forgot-password`, `update-password`, `confirm`, `error`, `callback` |
-| `/` | Homepage |
-| `/create-school` | School creation flow |
-| `/creators` | Creators landing page |
+| `/auth/login`, `/auth/sign-up`, `/auth/sign-up-success`, `/auth/forgot-password`, `/auth/update-password`, `/auth/confirm`, `/auth/error` | Login and recovery |
 | `/join-school` | Join a school via invitation or open enrollment |
-| `/platform-pricing` | Platform pricing page |
-| `/pricing` | School pricing page |
-| `/courses` | Public course catalog |
 | `/verify` | Certificate verification |
+| `/oauth/consent` | MCP OAuth consent. Must stay public so `authorization_id` is not dropped |
+
+`/`, `/creators`, `/create-school`, `/courses`, `/pricing`, and `/platform-pricing` are no longer public. Anonymous visitors go to login. A session with membership goes to the role dashboard.
 
 ## Row Level Security (RLS)
 
@@ -531,16 +528,12 @@ supabase.auth.onAuthStateChange((event, session) => {
 ```
 Has active tenant_users memberships?
   -> YES -> /dashboard/student          (returning user clicked old link)
-  -> NO, main platform (default tenant) -> /create-school
-  -> NO, school subdomain -> /join-school
+  -> NO  -> /join-school
 ```
 
 For all other OTP types (`recovery`, `magiclink`, etc.) the route uses the `next` query param as before.
 
 ```typescript
-// Simplified — see route.ts for full implementation
-const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001'
-
 if (type === 'signup' && user) {
   const { data: memberships } = await supabase
     .from('tenant_users')
@@ -550,13 +543,12 @@ if (type === 'signup' && user) {
     .limit(1)
 
   if ((memberships ?? []).length > 0) redirect('/dashboard/student')
-  else if (tenantId === DEFAULT_TENANT_ID) redirect('/create-school')
   else redirect('/join-school')
 }
 redirect(next) // recovery, magiclink, etc.
 ```
 
-**Why this matters:** New users signing up at `school.lvh.me` land on `/join-school` for that school; new users signing up at the main domain land on `/create-school`. No more floating, school-less accounts.
+**Why this matters:** New users with no membership land on `/join-school` for the current tenant. The old default-tenant `/create-school` branch is gone. This deploy is login plus the LMS, not a SaaS signup funnel.
 
 ## Related Documentation
 

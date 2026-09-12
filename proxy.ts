@@ -4,6 +4,7 @@ import { updateSession } from '@/lib/supabase/proxy'
 import { accessTokenFromCookies, jwtClaims } from '@/lib/supabase/session-cookie'
 import { createServerClient } from '@supabase/ssr'
 import { locales, defaultLocale } from './i18n'
+import { isRetiredMarketingPath } from '@/lib/auth/retired-marketing-path'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -319,15 +320,8 @@ export default async function proxy(request: NextRequest) {
     '/auth/update-password',
     '/auth/confirm',
     '/auth/error',
-    '/',
-    '/auth/callback',
-    '/create-school',
-    '/creators',
     '/join-school',
-    '/platform-pricing',
-    '/pricing',
     '/verify',
-    '/courses',
     // OAuth 2.1 consent screen (Supabase redirects here with ?authorization_id=…).
     // Must be public: the page handles its own login redirect and preserves the
     // authorization_id — the middleware's redirectTo drops query strings.
@@ -506,6 +500,17 @@ export default async function proxy(request: NextRequest) {
   }
   if (normalizedPath === '/dashboard') {
     return NextResponse.redirect(publicRedirectUrl(request, `/${locale}/dashboard/${userRole}`))
+  }
+
+  if (isRetiredMarketingPath(normalizedPath)) {
+    const homeRedirect = NextResponse.redirect(
+      publicRedirectUrl(request, `/${locale}/dashboard/${userRole}`),
+    )
+    for (const cookie of supabaseResponse.headers.getSetCookie()) {
+      homeRedirect.headers.append('set-cookie', cookie)
+    }
+    homeRedirect.headers.set('x-tenant-id', tenantId)
+    return homeRedirect
   }
 
   // Allow access — copy ALL Set-Cookie headers (not just the first one)

@@ -92,6 +92,10 @@ async function removeStaleFixtures(admin: SupabaseClient) {
 }
 
 test.beforeAll(async () => {
+  test.skip(
+    true,
+    'Personal deploy has no public course catalog. Login is the unauthenticated entry.',
+  )
   const admin = getServiceRoleClient()
   await removeStaleFixtures(admin)
 
@@ -352,6 +356,10 @@ async function findMailpitMessage(email: string): Promise<{ ID: string } | null>
 test.describe.configure({ mode: 'serial' })
 
 test.describe('Loop 2 — public link → join → learn → verifiable certificate', () => {
+  test.skip(
+    true,
+    'Personal deploy has no public course catalog. Login is the unauthenticated entry.',
+  )
   test('a new visitor enrols from the public course page, learns, and gets a verifiable certificate', async ({
     page,
     browser,

@@ -15,7 +15,7 @@ test.describe('Internationalization', () => {
 
   test('/es locale route loads correctly', async ({ page }) => {
     await page.goto(`${BASE}/es`)
-    await expect(page).toHaveURL(/\/es/)
+    await expect(page).toHaveURL(/\/es\/auth\/login/)
   })
 
   test('login page renders in Spanish', async ({ page }) => {
