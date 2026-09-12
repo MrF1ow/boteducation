@@ -27,7 +27,6 @@ const STUDENT_PAGES: PageDef[] = [
   { name: 'Browse', path: '/dashboard/student/browse' },
   { name: 'Progress', path: '/dashboard/student/progress' },
   { name: 'Certificates', path: '/dashboard/student/certificates' },
-  { name: 'Community', path: '/dashboard/student/community' },
   { name: 'Profile', path: '/dashboard/student/profile' },
 ]
 
@@ -35,7 +34,6 @@ const TEACHER_PAGES: PageDef[] = [
   { name: 'Dashboard', path: '/dashboard/teacher' },
   { name: 'Courses', path: '/dashboard/teacher/courses' },
   { name: 'Templates', path: '/dashboard/teacher/templates' },
-  { name: 'Community', path: '/dashboard/teacher/community' },
   { name: 'API Tokens', path: '/dashboard/teacher/api-tokens' },
 ]
 
@@ -46,7 +44,6 @@ const ADMIN_PAGES: PageDef[] = [
   { name: 'Enrollments', path: '/dashboard/admin/enrollments' },
   { name: 'Analytics', path: '/dashboard/admin/analytics' },
   { name: 'Categories', path: '/dashboard/admin/categories' },
-  { name: 'Community', path: '/dashboard/admin/community' },
   { name: 'Notifications', path: '/dashboard/admin/notifications' },
   { name: 'Settings', path: '/dashboard/admin/settings' },
   { name: 'Appearance', path: '/dashboard/admin/appearance' },

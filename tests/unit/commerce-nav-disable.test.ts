@@ -17,6 +17,9 @@ describe('commerce nav disable', () => {
     expect(sidebar).not.toContain('/dashboard/teacher/revenue')
     expect(sidebar).not.toContain('/dashboard/admin/billing')
     expect(sidebar).not.toContain('href: "/courses"')
+    expect(sidebar).not.toContain('/dashboard/student/community')
+    expect(sidebar).not.toContain('/dashboard/teacher/community')
+    expect(sidebar).not.toContain('/dashboard/admin/community')
     expect(sidebar).toContain('/dashboard/student/browse')
   })
 
