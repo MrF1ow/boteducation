@@ -1,11 +1,12 @@
+export const RETIRED_STOREFRONT_PATHS = ['/courses', '/pricing'] as const
+
 const RETIRED_MARKETING_PATHS = [
   '/',
   '/create-school',
   '/creators',
-  '/courses',
+  ...RETIRED_STOREFRONT_PATHS,
   '/about',
   '/p',
-  '/pricing',
   '/platform-pricing',
   '/products',
   '/checkout',

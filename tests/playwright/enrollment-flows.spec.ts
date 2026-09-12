@@ -2,7 +2,7 @@
  * Enrollment Flows E2E Tests
  *
  * Covers:
- * - Free enrollment via subscription (browse page)
+ * - Membership enroll from Browse without a subscriptions row
  * - Manual payment request lifecycle (student creates -> admin approves -> enrollment)
  * - Payment request cancellation
  */
@@ -77,6 +77,48 @@ test.describe('Browse Page & Enrollment UI', () => {
     if (count > 0) {
       // At least one enrolled course link should be present
       await expect(enrolledLinks.first()).toBeVisible()
+    }
+  })
+
+  test('member enrolls in a published course without a subscription', async ({ page }) => {
+    test.setTimeout(90_000)
+    const admin = getAdmin()
+    const courseId = 1002
+
+    await admin.from('enrollments').delete().eq('user_id', STUDENT_ID).eq('course_id', courseId)
+    await admin.from('entitlements').delete().eq('user_id', STUDENT_ID).eq('course_id', courseId)
+
+    try {
+      await loginAsStudent(page)
+      await page.goto(`${BASE}/${LOCALE}/dashboard/student/browse`)
+      await expect(page.getByTestId('browse-courses-page')).toBeVisible({ timeout: 15_000 })
+      await expect(page.getByText(/no subscription|view plans|upgrade/i)).toHaveCount(0)
+      await expect(page.getByRole('link', { name: /pricing/i })).toHaveCount(0)
+
+      const card = page.getByTestId(`browse-course-${courseId}`)
+      const enrollButton = card.getByTestId('browse-enroll')
+      await expect(enrollButton).toBeVisible({ timeout: 10_000 })
+      await enrollButton.click()
+
+      await expect(card.getByTestId('browse-continue')).toBeVisible({ timeout: 15_000 })
+      await card.getByTestId('browse-continue').click()
+      await expect(page).toHaveURL(new RegExp(`/dashboard/student/courses/${courseId}`))
+    } finally {
+      await admin.from('entitlements').delete().eq('user_id', STUDENT_ID).eq('course_id', courseId)
+      await admin.from('entitlements').insert({
+        user_id: STUDENT_ID,
+        course_id: courseId,
+        tenant_id: DEFAULT_TENANT,
+        source_type: 'product',
+        source_id: 1002,
+        status: 'active',
+      })
+      await admin.from('enrollments').upsert({
+        user_id: STUDENT_ID,
+        course_id: courseId,
+        tenant_id: DEFAULT_TENANT,
+        status: 'active',
+      }, { onConflict: 'user_id,course_id' })
     }
   })
 })

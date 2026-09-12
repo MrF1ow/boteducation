@@ -377,9 +377,8 @@ test.describe('Loop 2 — join school → learn → verifiable certificate', () 
       )
       expect(membership).toMatchObject({ role: 'student', status: 'active' })
 
-      // Browse enroll needs a covering subscription. A personal school grants
-      // access the same way `grant_free_entitlement` does; the RPC itself
-      // requires auth.uid() so the e2e writes those rows as service role.
+      // Membership enroll via self_enroll_school_course requires auth.uid(), so
+      // this e2e writes the same free entitlement + enrollment as service role.
       must(
         await admin
           .from('entitlements')

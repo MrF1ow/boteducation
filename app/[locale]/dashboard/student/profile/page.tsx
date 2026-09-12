@@ -7,8 +7,6 @@ import { Button } from "@/components/ui/button"
 import {
     IconHistory,
     IconSettings,
-    IconCheck,
-    IconCrown,
     IconTrophy,
     IconChartBar,
     IconAward,
@@ -36,27 +34,12 @@ import { areToursEnabled } from '@/lib/ui-state-keys'
 async function getProfileData(userId: string, tenantId: string) {
     const supabase = createAdminClient()
 
-    const [profileRes, subscriptionRes, transactionsRes, certificatesRes, enrollmentsRes] = await Promise.all([
+    const [profileRes, transactionsRes, certificatesRes, enrollmentsRes] = await Promise.all([
         supabase
             .from('profiles')
             .select('*, user_roles(role)')
             .eq('id', userId)
             .single(),
-        supabase
-            .from('subscriptions')
-            .select(`
-                *,
-                plans(
-                    plan_name,
-                    price,
-                    currency,
-                    features
-                )
-            `)
-            .eq('user_id', userId)
-            .eq('tenant_id', tenantId)
-            .eq('subscription_status', 'active')
-            .maybeSingle(),
         supabase
             .from('transactions')
             .select('*')
@@ -137,7 +120,6 @@ async function getProfileData(userId: string, tenantId: string) {
 
     return {
         profile: profileRes.data,
-        subscription: subscriptionRes.data,
         transactions: transactionsRes.data || [],
         certificates: certificatesRes.data || [],
         enrolledCourses,
@@ -260,13 +242,12 @@ function PurchasedCourseCard({ course: ec, labels }: { course: any; labels: { no
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default async function ProfilePage() {
     const tenantId = await getCurrentTenantId()
-    const supabase = createAdminClient()
     const user = await getSessionUser()
     if (!user) {
         redirect('/auth/login')
     }
 
-    const { profile, subscription, transactions, certificates, enrolledCourses } = await getProfileData(user.id, tenantId)
+    const { profile, transactions, certificates, enrolledCourses } = await getProfileData(user.id, tenantId)
     const uiState = await getUiState(user.id)
     const userInitial = profile?.full_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || "U"
 
@@ -354,48 +335,6 @@ export default async function ProfilePage() {
                                 </div>
                                 <ProfileGamificationStats />
                                 <StreakCalendar />
-                            </CardContent>
-                        </Card>
-
-                        {/* Subscription Card */}
-                        <Card className="border border-border bg-card overflow-hidden">
-                            <CardHeader className="pb-2">
-                                <CardTitle className="flex items-center gap-2 text-base">
-                                    <IconCrown size={18} className="text-primary" />
-                                    {t('currentPlan')}
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                {subscription ? (
-                                    <>
-                                        <div>
-                                            <h3 className="text-xl font-bold">{subscription.plans?.plan_name}</h3>
-                                            <p className="text-muted-foreground text-xs font-medium">
-                                                {t('renewsOn', { date: dateFormatter.format(new Date(subscription.end_date)) })}
-                                            </p>
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            {(subscription.plans?.features ?? '').split(',').filter(Boolean).slice(0, 3).map((f: string, i: number) => (
-                                                <div key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
-                                                    <IconCheck size={14} className="text-emerald-500 shrink-0" />
-                                                    <span className="line-clamp-1">{f.trim()}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <Button variant="outline" className="w-full rounded-xl h-10 font-semibold">
-                                            {t('manageSubscription')}
-                                        </Button>
-                                    </>
-                                ) : (
-                                    <>
-                                        <p className="text-sm text-muted-foreground">{t('noActiveSubscription')}</p>
-                                        <Link href="/pricing">
-                                            <Button variant="outline" className="w-full rounded-xl h-10 font-semibold">
-                                                {t('viewPlans')}
-                                            </Button>
-                                        </Link>
-                                    </>
-                                )}
                             </CardContent>
                         </Card>
                     </div>

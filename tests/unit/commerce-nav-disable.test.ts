@@ -16,6 +16,8 @@ describe('commerce nav disable', () => {
     expect(sidebar).not.toContain('/dashboard/admin/monetization')
     expect(sidebar).not.toContain('/dashboard/teacher/revenue')
     expect(sidebar).not.toContain('/dashboard/admin/billing')
+    expect(sidebar).not.toContain('href: "/courses"')
+    expect(sidebar).toContain('/dashboard/student/browse')
   })
 
   it('keeps MCP tokens in both staff shells', () => {
@@ -47,6 +49,7 @@ describe('commerce nav disable', () => {
     expect(layout).toContain("redirect('/dashboard')")
     expect(nextConfig).toContain('/dashboard/student/store')
     expect(nextConfig).toContain('/dashboard/admin/payouts')
+    expect(nextConfig).toContain('RETIRED_STOREFRONT_PATHS')
     expect(nextConfig).toContain("destination: '/:locale/dashboard'")
     const storePage = readFileSync('app/[locale]/dashboard/student/store/[[...rest]]/page.tsx', 'utf8')
     const payoutsPage = readFileSync('app/[locale]/dashboard/admin/payouts/[[...rest]]/page.tsx', 'utf8')

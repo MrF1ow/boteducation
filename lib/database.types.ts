@@ -7231,6 +7231,10 @@ export type Database = {
         }
         Returns: Json
       }
+      self_enroll_school_course: {
+        Args: { _course_id: number }
+        Returns: undefined
+      }
       self_enroll_subscription_course: {
         Args: { _course_id: number }
         Returns: undefined

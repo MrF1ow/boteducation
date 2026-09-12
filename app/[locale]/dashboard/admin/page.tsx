@@ -176,7 +176,7 @@ export default async function AdminDashboardPage({
           description: t('onboarding.courseSuccessDescription', {
             course: firstReadyCourse.title,
           }),
-          href: `/courses/${firstReadyCourse.course_id}`,
+          href: `/dashboard/teacher/courses/${firstReadyCourse.course_id}`,
           copyLabel: t('onboarding.copyCourseLink'),
           copiedLabel: t('onboarding.courseLinkCopied'),
           viewLabel: t('onboarding.viewCourse'),

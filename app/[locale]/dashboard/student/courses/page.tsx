@@ -257,14 +257,9 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
           <p className="text-muted-foreground text-sm mb-8 max-w-sm mx-auto leading-relaxed">
             {t('noCoursesDesc')}
           </p>
-          <div className="flex gap-3 justify-center">
-            <Link href="/courses">
-              <Button>{t('browseCatalog')}</Button>
-            </Link>
-            <Link href="/pricing">
-              <Button variant="outline">{t('viewPlans')}</Button>
-            </Link>
-          </div>
+          <Link href="/dashboard/student/browse">
+            <Button>{t('browseCatalog')}</Button>
+          </Link>
         </div>
       ) : (
         <>

@@ -6,7 +6,7 @@ import { StatsCards } from '@/components/student/stats-cards'
 import { CourseProgressCard } from '@/components/student/course-progress-card'
 import { UpcomingExams } from '@/components/student/upcoming-exams'
 import { RecentActivity } from '@/components/student/recent-activity'
-import { IconRocket, IconSparkles, IconCircleCheck } from '@tabler/icons-react'
+import { IconRocket, IconCircleCheck } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { MiniLeaderboard } from '@/components/gamification/mini-leaderboard'
@@ -21,7 +21,7 @@ import { isTourCompleted, areToursEnabled, isChecklistDismissed, checklistStateK
 async function getData(userId: string, tenantId: string) {
   const supabase = createAdminClient()
 
-  const [enrollments, examSubmissions, lessonCompletions, upcomingExams, activeSubscription] = await Promise.all([
+  const [enrollments, examSubmissions, lessonCompletions, upcomingExams] = await Promise.all([
     supabase
       .from('enrollments')
       .select(`
@@ -60,16 +60,6 @@ async function getData(userId: string, tenantId: string) {
       .gte('exam_date', new Date().toISOString())
       .order('exam_date', { ascending: true })
       .limit(5),
-
-    supabase
-      .from('subscriptions')
-      .select('subscription_id, plan:plans!subscriptions_plan_id_fkey(plan_name)')
-      .eq('user_id', userId)
-      .eq('tenant_id', tenantId)
-      .eq('subscription_status', 'active')
-      .gte('end_date', new Date().toISOString())
-      .order('end_date', { ascending: false })
-      .limit(1),
   ])
 
   if (enrollments.error) throw new Error(enrollments.error.message)
@@ -97,14 +87,11 @@ async function getData(userId: string, tenantId: string) {
     examSubmissions: examSubmissions.data || [],
     lessonCompletions: lessonCompletions.data || [],
     upcomingExams: (upcomingExams.data || []) as any[],
-    hasActiveSubscription: (activeSubscription.data?.length ?? 0) > 0,
-    planName: (activeSubscription.data?.[0]?.plan as any)?.plan_name || null,
   }
 }
 
 export default async function StudentDashboard() {
   const tenantId = await getCurrentTenantId()
-  const supabase = createAdminClient()
   const user = await getSessionUser()
   if (!user) {
     redirect('/auth/login')
@@ -235,35 +222,18 @@ export default async function StudentDashboard() {
 
             {/* Empty State — no courses at all */}
             {data.courses.length === 0 && (
-              data.hasActiveSubscription ? (
-                <div className="bg-card border border-primary/20 rounded-2xl p-6 sm:p-10 text-center">
-                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <IconSparkles className="h-7 w-7" />
-                  </div>
-                  <h2 className="text-xl font-bold mb-2">
-                    {t('activeSubscriptionTitle', { planName: data.planName || 'subscription' })}
-                  </h2>
-                  <p className="text-muted-foreground mb-6 max-w-sm mx-auto text-sm">
-                    {t('activeSubscriptionDesc')}
-                  </p>
-                  <Link href="/dashboard/student/browse">
-                    <Button>{t('browseAndEnroll')}</Button>
-                  </Link>
+              <div className="bg-card border border-border rounded-2xl p-6 sm:p-10 text-center">
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                  <IconRocket className="h-7 w-7" />
                 </div>
-              ) : (
-                <div className="bg-card border border-border rounded-2xl p-6 sm:p-10 text-center">
-                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                    <IconRocket className="h-7 w-7" />
-                  </div>
-                  <h2 className="text-xl font-bold mb-2">{t('noCoursesYet')}</h2>
-                  <p className="text-muted-foreground mb-6 max-w-sm mx-auto text-sm">
-                    {t('startJourneyDesc')}
-                  </p>
-                  <Link href="/pricing">
-                    <Button>{tCommon('browseCourses')}</Button>
-                  </Link>
-                </div>
-              )
+                <h2 className="text-xl font-bold mb-2">{t('noCoursesYet')}</h2>
+                <p className="text-muted-foreground mb-6 max-w-sm mx-auto text-sm">
+                  {t('startJourneyDesc')}
+                </p>
+                <Link href="/dashboard/student/browse">
+                  <Button>{tCommon('browseCourses')}</Button>
+                </Link>
+              </div>
             )}
           </div>
 
