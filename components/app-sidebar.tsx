@@ -11,7 +11,6 @@ import {
     IconDashboard,
     IconKey,
     IconLogout,
-    IconMessages,
     IconSearch,
     IconSettings,
     IconSparkles,
@@ -147,12 +146,7 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                         { title: t('enrollments'), href: "/dashboard/admin/enrollments" },
                     ],
                 },
-                {
-                    title: t('people'), href: "/dashboard/admin/users", icon: IconUsers,
-                    items: [
-                        { title: t('community'), href: "/dashboard/admin/community" },
-                    ],
-                },
+                { title: t('people'), href: "/dashboard/admin/users", icon: IconUsers },
                 { title: t('analytics'), href: "/dashboard/admin/analytics", icon: IconChartBar },
                 {
                     title: t('settings'), href: "/dashboard/admin/settings", icon: IconSettings, tourId: 'sidebar-settings',
@@ -164,7 +158,6 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
             teacher: [
                 { title: t('dashboard'), href: "/dashboard/teacher", icon: IconDashboard },
                 { title: t('myCourses'), href: "/dashboard/teacher/courses", icon: IconBook, tourId: 'sidebar-courses' },
-                { title: t('community'), href: "/dashboard/teacher/community", icon: IconMessages },
                 { title: t('apiTokens'), href: "/dashboard/teacher/api-tokens", icon: IconKey },
             ],
             student: [
@@ -178,7 +171,6 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                     ],
                 },
                 { title: t('browseCourses'), href: "/dashboard/student/browse", icon: IconSearch, tourId: 'sidebar-browse' },
-                { title: t('community'), href: "/dashboard/student/community", icon: IconMessages },
                 { title: t('aiAssistant'), href: "/dashboard/student/ai-assistant", icon: IconSparkles },
             ],
         }

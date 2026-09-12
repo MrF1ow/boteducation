@@ -18,7 +18,6 @@ const ENFORCED_ELSEWHERE: Record<string, string> = {
   leaderboard: 'get_gamification_features RPC in supabase/functions/get-leaderboard',
   achievements: 'get_gamification_features RPC in supabase/functions/check-achievements',
   store: 'get_gamification_features RPC in supabase/functions/spend-points',
-  community: 'features.community check on every community page (app/[locale]/dashboard/*/community)',
   priority_support: 'not a product capability — support SLA',
   voice_exercises: 'no voice surface ships yet; gate at build time (tracked in #662)',
   white_label: 'no white-label surface ships yet; gate at build time (tracked in #662)',
@@ -70,6 +69,12 @@ describe('plan feature gate contract (#662)', () => {
   it('api_access is no longer a plan promise (MCP is open on every plan)', () => {
     expect(FEATURE_REQUIRED_PLAN).not.toHaveProperty('api_access')
     expect(PLAN_FEATURE_LABELS).not.toHaveProperty('api_access')
+  })
+
+  it('community is no longer a plan promise (the product is gone)', () => {
+    expect(FEATURE_REQUIRED_PLAN).not.toHaveProperty('community')
+    expect(PLAN_FEATURE_LABELS).not.toHaveProperty('community')
+    expect(ENFORCED_ELSEWHERE).not.toHaveProperty('community')
   })
 
   it('every promised key has a comparison-table label', () => {

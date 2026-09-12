@@ -16,7 +16,6 @@ export interface PlanFeatures {
   landing_pages: boolean
   remove_branding: boolean
   voice_exercises: boolean
-  community: boolean
 }
 
 export interface PlanLimits {
@@ -48,7 +47,6 @@ export const FEATURE_REQUIRED_PLAN: Record<string, string> = {
   leaderboard: 'starter',
   achievements: 'starter',
   analytics: 'starter',
-  community: 'starter',
   store: 'pro',
   ai_grading: 'pro',
   voice_exercises: 'pro',
@@ -70,7 +68,6 @@ export const PLAN_FEATURE_LABELS: Record<string, string> = {
   leaderboard: 'Leaderboard',
   achievements: 'Achievements',
   store: 'Point Store',
-  community: 'Community',
   certificates: 'Certificates',
   analytics: 'Analytics',
   ai_grading: 'AI Auto-Grading',

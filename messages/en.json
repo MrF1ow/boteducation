@@ -4279,8 +4279,7 @@
     "payouts": "Payouts",
     "invoices": "Invoices",
     "myPayments": "My Payments",
-    "myBilling": "Billing & Receipts",
-    "community": "Community"
+    "myBilling": "Billing & Receipts"
   },
   "userNav": {
     "profile": "Profile",
@@ -5407,7 +5406,6 @@
       "leaderboard": "Leaderboard",
       "achievements": "Achievements",
       "store": "Point Store",
-      "community": "Community",
       "certificates": "Custom Certificates",
       "analytics": "Analytics",
       "ai_grading": "AI Auto-Grading",
@@ -6329,163 +6327,6 @@
       "title": "Certificate Not Found",
       "description": "The verification code does not match any certificate in our records, or the certificate has been removed.",
       "returnHome": "Return Home"
-    }
-  },
-  "community": {
-    "title": "Community",
-    "schoolFeedDescription": "Connect with your school community",
-    "courseFeedDescription": "Discuss and collaborate with your classmates",
-    "newPost": "New Post",
-    "writePost": "What's on your mind?",
-    "addTitle": "Add title",
-    "post": "Post",
-    "posting": "Posting...",
-    "posted": "Post created",
-    "editPost": "Edit Post",
-    "deletePost": "Delete Post",
-    "confirmDelete": "Are you sure you want to delete this post?",
-    "postDeleted": "Post deleted",
-    "reply": "Reply",
-    "writeReply": "Write a reply...",
-    "replyPosted": "Reply posted",
-    "comments": "{count, plural, one {# comment} other {# comments}}",
-    "noComments": "No comments yet",
-    "beFirstComment": "Be the first to comment",
-    "showComments": "Show comments",
-    "hideComments": "Hide comments",
-    "reactions": {
-      "like": "Like",
-      "helpful": "Helpful",
-      "insightful": "Insightful",
-      "fire": "Fire"
-    },
-    "filters": {
-      "all": "All",
-      "posts": "Posts",
-      "discussions": "Discussions",
-      "polls": "Polls",
-      "milestones": "Milestones",
-      "byTeachers": "By Teachers",
-      "byStudents": "By Students"
-    },
-    "pinned": "Pinned",
-    "locked": "Locked",
-    "lockedMessage": "This post is locked. No new comments can be added.",
-    "hidden": "Hidden",
-    "pin": "Pin post",
-    "unpin": "Unpin post",
-    "lock": "Lock post",
-    "unlock": "Unlock post",
-    "hide": "Hide post",
-    "flag": "Report",
-    "flagTitle": "Report Content",
-    "flagDescription": "Describe why you're reporting this content",
-    "flagReason": "Reason",
-    "flagSubmit": "Submit Report",
-    "flagSubmitted": "Report submitted",
-    "muted": "You are currently muted",
-    "mutedUntil": "You are muted until {date}",
-    "mutedIndefinite": "You are muted from posting. Contact an admin for more information.",
-    "unknownUser": "Unknown user",
-    "emptySchool": "No posts yet. Be the first to share something!",
-    "emptyCourse": "No discussions yet. Start the conversation!",
-    "loadMore": "Load more",
-    "loadingMore": "Loading...",
-    "noMorePosts": "You've reached the end",
-    "errorLoading": "Error loading posts",
-    "errorPosting": "Error creating post",
-    "errorReaction": "Error updating reaction",
-    "discussionPrompt": "Discussion Prompt",
-    "graded": "Graded",
-    "linkedLesson": "Linked to: {lesson}",
-    "linkedToLesson": "Linked to lesson",
-    "createPrompt": "Create Discussion Prompt",
-    "promptTitle": "Prompt Title",
-    "promptContent": "Prompt Content",
-    "selectLesson": "Link to a lesson (optional)",
-    "noLesson": "No lesson",
-    "gradedToggle": "Graded discussion",
-    "poll": {
-      "title": "Create Poll",
-      "question": "Question",
-      "options": "Options",
-      "addOption": "Add option",
-      "removeOption": "Remove",
-      "minOptions": "At least 2 options required",
-      "maxOptions": "Maximum 10 options",
-      "vote": "Vote",
-      "voted": "You voted",
-      "totalVotes": "{count, plural, one {# vote} other {# votes}}",
-      "results": "Results"
-    },
-    "milestone": {
-      "courseCompleted": "{name} completed the course {course}!",
-      "certificateEarned": "{name} earned a certificate!",
-      "levelUp": "{name} reached level {level}!",
-      "streak": "{name} is on a {days}-day streak!"
-    },
-    "moderation": {
-      "title": "Community Moderation",
-      "description": "Manage flagged content and user mutes",
-      "flaggedContent": "Flagged Content",
-      "mutedUsers": "Muted Users",
-      "noFlags": "No pending flags",
-      "noMutes": "No muted users",
-      "reviewFlag": "Review",
-      "dismissFlag": "Dismiss",
-      "flagReviewed": "Flag reviewed",
-      "muteUser": "Mute User",
-      "unmuteUser": "Unmute",
-      "muteReason": "Reason for muting",
-      "muteUntil": "Mute until (optional)",
-      "userMuted": "User muted",
-      "userUnmuted": "User unmuted",
-      "reportedBy": "Reported by {name}",
-      "reportReason": "Reason: {reason}"
-    },
-    "settings": {
-      "title": "Community",
-      "description": "Configure community features for your school",
-      "studentPostsSchoolFeed": "Allow student posts in school feed",
-      "studentPostsSchoolFeedDesc": "Students can create posts in the school-wide community feed",
-      "studentPolls": "Allow student polls",
-      "studentPollsDesc": "Students can create polls in the community",
-      "milestonePosts": "Auto-generate milestone posts",
-      "milestonePostsDesc": "Automatically create celebration posts for achievements like course completions"
-    },
-    "uploadImage": "Upload image",
-    "uploading": "Uploading...",
-    "imageUploaded": "Image uploaded",
-    "attachImage": "Attach image",
-    "tour": {
-      "welcome": {
-        "title": "Welcome to Community",
-        "description": "This is your school's community space. Share updates, ask questions, and connect with fellow members."
-      },
-      "composer": {
-        "title": "Create a Post",
-        "description": "Write what's on your mind, add a title or image, and share it with the community. Teachers can also create discussion prompts."
-      },
-      "filters": {
-        "title": "Filter Posts",
-        "description": "Use these filters to browse by post type (discussions, polls, milestones) or by author role (teachers, students)."
-      },
-      "feed": {
-        "title": "Community Feed",
-        "description": "Posts from your school community appear here, with the newest first. Pinned posts always stay at the top."
-      },
-      "reactions": {
-        "title": "React & Comment",
-        "description": "Show appreciation with reactions (like, helpful, insightful, fire) or click comments to join the conversation."
-      },
-      "moderation": {
-        "title": "Moderation Tools",
-        "description": "As an admin, you can review flagged content, mute users, and manage the community from here."
-      }
-    },
-    "upgrade": {
-      "title": "Community is a premium feature",
-      "description": "Upgrade to the Starter plan or higher to access the community feed."
     }
   },
   "schoolLanding": {
