@@ -8,19 +8,26 @@ import { updateSettings } from '@/app/actions/admin/settings'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
+import type { SettingsGroup } from '@/app/actions/admin/settings'
 
 interface BrandingSettingsFormProps {
-  settings: Record<string, { value?: { value?: string } } | undefined>
+  settings: SettingsGroup
+}
+
+function settingText(settings: SettingsGroup, key: string, fallback = ''): string {
+  const raw = settings[key]?.value?.value
+  if (raw == null || raw === '') return fallback
+  return String(raw)
 }
 
 export default function BrandingSettingsForm({ settings }: BrandingSettingsFormProps) {
   const t = useTranslations('dashboard.admin.settings.form')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const logoUrl = settings.logo_url?.value?.value || ''
-  const faviconUrl = settings.favicon_url?.value?.value || ''
-  const primaryColor = settings.primary_color?.value?.value || '#2563eb'
-  const secondaryColor = settings.secondary_color?.value?.value || '#7c3aed'
+  const logoUrl = settingText(settings, 'logo_url')
+  const faviconUrl = settingText(settings, 'favicon_url')
+  const primaryColor = settingText(settings, 'primary_color', '#2563eb')
+  const secondaryColor = settingText(settings, 'secondary_color', '#7c3aed')
 
   const [previewPrimary, setPreviewPrimary] = useState(primaryColor)
   const [previewSecondary, setPreviewSecondary] = useState(secondaryColor)

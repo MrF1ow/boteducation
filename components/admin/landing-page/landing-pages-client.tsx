@@ -18,6 +18,7 @@ import {
   IconExternalLink,
 } from '@tabler/icons-react'
 import type { LandingPage } from '@/app/actions/admin/landing-pages'
+import type { SettingsGroup } from '@/app/actions/admin/settings'
 import type { Data } from '@measured/puck'
 import type { LandingData } from '@/lib/puck/types'
 import { deepCloneWithFreshIds } from '@/lib/puck/templates'
@@ -77,7 +78,7 @@ interface Props {
   plan: string
   tenantId: string
   templates: PuckTemplate[]
-  brandingSettings: Record<string, unknown>
+  brandingSettings: SettingsGroup
   landingData: LandingData
 }
 
