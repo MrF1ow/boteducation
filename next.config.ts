@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 import createNextIntlPlugin from 'next-intl/plugin';
 import { withSentryConfig } from "@sentry/nextjs";
+import { supabaseStorageRemotePatterns } from './lib/images/supabase-storage-remote-patterns';
 
 const withNextIntl = createNextIntlPlugin('./i18n.ts');
 
@@ -41,6 +42,11 @@ const nextConfig: NextConfig = {
     // Both are used repo-wide via barrel named imports (672 files each);
     // this lets Next.js rewrite them to per-icon imports at build time.
     optimizePackageImports: ['@tabler/icons-react', 'lucide-react'],
+  },
+  images: {
+    remotePatterns: supabaseStorageRemotePatterns(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+    ),
   },
   async redirects() {
     return COMMERCE_GONE_PATHS.flatMap((path) => [
