@@ -34,6 +34,7 @@ import { test, expect, type Page } from '@playwright/test'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { TENANT_BASE, LOCALE } from './utils/constants'
 import { getServiceRoleClient, CODE_ACADEMY_TENANT } from './utils/seed-state'
+import { login } from './utils/auth'
 
 const BASE = TENANT_BASE
 const CREATOR_ID = 'a1000000-0000-0000-0000-000000000003' // creator@codeacademy.com
@@ -651,11 +652,7 @@ test.describe('Loop 2 — join school → learn → verifiable certificate', () 
       // Recovery session + the Turbopack issues overlay can hide the user
       // menu. The thing under test is that the new password signs in.
       await page.context().clearCookies()
-      await page.goto(`${BASE}/${LOCALE}/auth/login`, { waitUntil: 'domcontentloaded' })
-      await fillSettled(page, 'login-email', STUDENT.email)
-      await fillSettled(page, 'login-password', STUDENT.newPassword)
-      await domClick(page, 'login-submit')
-      await page.waitForURL(/\/dashboard\/student/, { timeout: 60_000 })
+      await login(page, STUDENT.email, STUDENT.newPassword, BASE)
     })
   })
 })
