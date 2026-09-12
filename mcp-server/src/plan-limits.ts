@@ -1,14 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
- * Plan-limit awareness for the MCP tools (issue #658).
+ * Plan-limit helpers leftover from issue #658.
  *
- * The `enforce_course_plan_limit` / `enforce_student_plan_limit` triggers
- * raise SQLSTATE `LM001` (`plan_limit_exceeded:<resource>`) when a write
- * would push the tenant past `platform_plans.limits`. The MCP server runs on
- * the caller's own RLS-scoped token, so it cannot count a tenant's courses
- * itself (a teacher only sees their own) — the `get_tenant_plan_usage` RPC
- * does that server-side for members of the tenant.
+ * Self-hosted leftover cleanup PR-01 dropped `enforce_course_plan_limit`,
+ * `enforce_student_plan_limit`, and `get_tenant_plan_usage`. MCP course and
+ * member writes must not read Free caps or emit upgrade copy.
  */
 
 export const PLAN_LIMIT_SQLSTATE = "LM001";
@@ -35,58 +32,30 @@ export interface TenantPlanUsage {
   max_students: number;
 }
 
+/** Usage RPC is gone. Callers must treat missing usage as unlimited. */
 export async function getTenantPlanUsage(
-  supabase: SupabaseClient,
-  tenantId: string
+  _supabase: SupabaseClient,
+  _tenantId: string
 ): Promise<TenantPlanUsage | null> {
-  const { data, error } = await supabase.rpc("get_tenant_plan_usage", {
-    _tenant_id: tenantId,
-  });
-  if (error || !data) return null;
-  const usage = data as Partial<TenantPlanUsage>;
-  return {
-    courses: usage.courses ?? 0,
-    students: usage.students ?? 0,
-    max_courses: usage.max_courses ?? -1,
-    max_students: usage.max_students ?? -1,
-  };
+  return null;
 }
 
-function formatLimitMessage(resource: PlanLimitResource, usage: TenantPlanUsage | null): string {
-  const noun = resource === "courses" ? "courses" : "students";
-  if (!usage) {
-    return `The school's plan does not allow more ${noun}. Ask a school admin to upgrade the plan.`;
-  }
-  const max = resource === "courses" ? usage.max_courses : usage.max_students;
-  const current = resource === "courses" ? usage.courses : usage.students;
-  return (
-    `The school's plan is limited to ${max} ${noun} and it currently has ${current}. ` +
-    (resource === "courses"
-      ? "Archive a course or ask a school admin to upgrade the plan."
-      : "Ask a school admin to upgrade the plan.")
-  );
-}
-
-/** Upgrade copy for a write the database refused with `LM001`. */
+/** Upgrade copy is retired. The database no longer refuses these writes. */
 export async function planLimitMessage(
-  supabase: SupabaseClient,
-  tenantId: string,
-  resource: PlanLimitResource
+  _supabase: SupabaseClient,
+  _tenantId: string,
+  _resource: PlanLimitResource
 ): Promise<string> {
-  return formatLimitMessage(resource, await getTenantPlanUsage(supabase, tenantId));
+  return "Course and student writes are not limited by a platform plan.";
 }
 
 /**
- * Pre-check before a write that would add one non-archived course. Returns the
- * upgrade message when the tenant has no headroom, `null` when it does or when
- * usage could not be read (the trigger still decides in that case).
+ * Pre-check before a write that would add one non-archived course.
+ * Always `null`: there is no Free cap to read.
  */
 export async function courseLimitHeadroomError(
-  supabase: SupabaseClient,
-  tenantId: string
+  _supabase: SupabaseClient,
+  _tenantId: string
 ): Promise<string | null> {
-  const usage = await getTenantPlanUsage(supabase, tenantId);
-  if (!usage || usage.max_courses < 0) return null;
-  if (usage.courses >= usage.max_courses) return formatLimitMessage("courses", usage);
   return null;
 }

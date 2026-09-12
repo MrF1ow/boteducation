@@ -6,8 +6,6 @@ import { getPaymentProvider, PROVIDER_CAPABILITIES, type Currency, type PaymentP
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { isSuperAdmin } from '@/lib/supabase/get-user-role'
 import { assertReadyToPublish } from '@/lib/payments/tenant-payment-readiness'
-import { checkCourseLimit } from '@/app/actions/teacher/courses'
-import { courseLimitMessage, isPlanLimitError } from '@/lib/billing/plan-limit-error'
 import { getProductCreationReadiness } from '@/lib/admin/product-creation/validation'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track, safeAnalytics } from '@/lib/analytics/server'
@@ -61,16 +59,8 @@ function buildPostRegistrationStepRows(steps: ProductPostRegistrationStepInput[]
     }))
 }
 
-/**
- * The wizard RPC inserts the course inside one transaction, so the
- * `enforce_course_plan_limit` trigger (#658) can reject it after the pre-check
- * passed (a concurrent create, an MCP write). Surface the same upgrade copy the
- * pre-check shows instead of the raw `plan_limit_exceeded:courses`.
- */
+/** Surface the RPC error as-is. Plan-limit upgrade copy is retired. */
 async function wizardErrorMessage(rpcError: { message: string; code?: string }): Promise<string> {
-  if (isPlanLimitError(rpcError)) {
-    return courseLimitMessage(await checkCourseLimit())
-  }
   return rpcError.message
 }
 
@@ -462,13 +452,6 @@ export async function saveProductCreationWizard(
     // Course-limit gate only applies to brand-new courses (needs plan features,
     // so it stays in the action rather than the SQL transaction).
     if (input.course.sourceMode === 'new') {
-      const limitCheck = await checkCourseLimit()
-      if (!limitCheck.canCreate) {
-        throw new Error(
-          `Your ${limitCheck.plan} plan is limited to ${limitCheck.limit} courses. You currently have ${limitCheck.currentCount} courses.`
-        )
-      }
-
       // The course FK requires the author's profile to exist.
       await adminClient
         .from('profiles')

@@ -7,8 +7,6 @@ import { revalidatePath } from 'next/cache'
 import { sendEmail } from '@/lib/email/send'
 import { joinedSchoolTemplate } from '@/lib/email/templates/joined-school'
 import { reconcileAccessCutoffSafely } from '@/lib/billing/access-cutoff'
-import { countTenantUsage, getTenantPlanLimits } from '@/lib/billing/plan-limits'
-import { isPlanLimitError, STUDENT_LIMIT_MESSAGE } from '@/lib/billing/plan-limit-error'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track } from '@/lib/analytics/server'
 
@@ -47,21 +45,6 @@ export async function joinCurrentSchool() {
   // a new one, so it goes through the same limit pre-check below rather than
   // around it.
   const isReinstatement = !!existingMembership
-
-  // Check student limit before allowing join. Limit and count come from
-  // lib/billing/plan-limits so this pre-check agrees with the billing page and
-  // with the `enforce_student_plan_limit` trigger (#658) that backs it: no
-  // `is_active` filter on the plan, and a missing limit means unlimited — the
-  // old `?? 50` default could refuse a join on a plan the trigger allows.
-  const [{ limits }, usage] = await Promise.all([
-    getTenantPlanLimits(adminClient, tenantId),
-    countTenantUsage(adminClient, tenantId),
-  ])
-  const maxStudents = limits?.max_students ?? -1
-
-  if (maxStudents !== -1 && usage.students >= maxStudents) {
-    return { success: false, error: STUDENT_LIMIT_MESSAGE }
-  }
 
   // Check for pending invitation to determine role. A reinstated member keeps
   // the role they held unless a fresh invitation reassigns it.
@@ -116,11 +99,6 @@ export async function joinCurrentSchool() {
       })
 
   if (error) {
-    // The pre-check above lost a race for the last seat; the trigger is the
-    // authoritative answer and this is the message it stands for.
-    if (isPlanLimitError(error)) {
-      return { success: false, error: STUDENT_LIMIT_MESSAGE }
-    }
     console.error('Failed to join school:', error)
     return { success: false, error: 'Failed to join school. Please try again.' }
   }

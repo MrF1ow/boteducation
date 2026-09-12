@@ -8,15 +8,12 @@ import { updateSettings } from '@/app/actions/admin/settings'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
-import { UpgradeNudge } from '@/components/shared/upgrade-nudge'
 
 interface BrandingSettingsFormProps {
-  /** Colours are `custom_branding` (Business+, #662); logo/favicon stay open. */
-  colorsLocked?: boolean
-  settings: Record<string, any>
+  settings: Record<string, { value?: { value?: string } } | undefined>
 }
 
-export default function BrandingSettingsForm({ settings, colorsLocked = false }: BrandingSettingsFormProps) {
+export default function BrandingSettingsForm({ settings }: BrandingSettingsFormProps) {
   const t = useTranslations('dashboard.admin.settings.form')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -36,13 +33,8 @@ export default function BrandingSettingsForm({ settings, colorsLocked = false }:
       const updatedSettings = {
         logo_url: { value: formData.get('logo_url') as string },
         favicon_url: { value: formData.get('favicon_url') as string },
-        // Colour keys are refused server-side below Business; don't send them.
-        ...(colorsLocked
-          ? {}
-          : {
-              primary_color: { value: formData.get('primary_color') as string },
-              secondary_color: { value: formData.get('secondary_color') as string },
-            }),
+        primary_color: { value: formData.get('primary_color') as string },
+        secondary_color: { value: formData.get('secondary_color') as string },
       }
 
       const result = await updateSettings(updatedSettings)
@@ -90,10 +82,6 @@ export default function BrandingSettingsForm({ settings, colorsLocked = false }:
         </p>
       </div>
 
-      {colorsLocked ? (
-        <UpgradeNudge feature="custom_branding" hint="brandingLocked" compact />
-      ) : (
-        <>
       {/* Colors */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Primary Color */}
@@ -162,9 +150,6 @@ export default function BrandingSettingsForm({ settings, colorsLocked = false }:
           </p>
         </div>
       </div>
-
-        </>
-      )}
 
       {/* Preview */}
       <div className="space-y-3">

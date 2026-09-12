@@ -4,8 +4,6 @@ import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { format } from 'date-fns'
 import { es, enUS } from 'date-fns/locale'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import {
   IconUsers,
   IconBook,
@@ -14,7 +12,7 @@ import {
 } from '@tabler/icons-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { UsageMeter } from '@/components/admin/usage-meter'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { OnboardingChecklist } from '@/components/shared/onboarding-checklist'
 import { AdminDashboardTour } from '@/components/tours/admin-dashboard-tour'
@@ -105,29 +103,13 @@ export default async function AdminDashboardPage({
     profiles: { id: string; full_name: string | null } | null
   }>
 
-  const adminClient = createAdminClient()
   const [
-    { data: tenant },
-    { count: studentCount },
     { data: onboardingSettings },
   ] = await Promise.all([
-    adminClient.from('tenants').select('plan')
-      .eq('id', tenantId).single(),
-    adminClient.from('tenant_users').select('*', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId).eq('role', 'student').eq('status', 'active'),
     supabase.from('tenant_settings').select('setting_key, setting_value')
       .eq('tenant_id', tenantId)
       .in('setting_key', ['site_name', 'theme_preset', 'logo_url']),
   ])
-
-  const planSlug = tenant?.plan || 'free'
-  const { data: platformPlan } = await adminClient
-    .from('platform_plans')
-    .select('name, limits')
-    .eq('slug', planSlug)
-    .eq('is_active', true)
-    .single()
-  const planLimits = (platformPlan?.limits as { max_courses?: number; max_students?: number }) || { max_courses: 5, max_students: 50 }
 
   const settingsByKey = new Map(
     (onboardingSettings || []).map(s => [s.setting_key, s.setting_value])
@@ -271,32 +253,7 @@ export default async function AdminDashboardPage({
       />
       </div>
 
-      {/* Plan & Usage — compact inline bar */}
-      <div data-tour="admin-plan" className="flex flex-col gap-4 rounded-xl bg-muted/40 p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-medium">
-            {platformPlan?.name || 'Free'} {t('plan.label')}
-          </span>
-          <Badge
-            variant={planSlug === 'free' ? 'secondary' : 'default'}
-            className="text-[10px] uppercase tracking-wider"
-          >
-            {planSlug === 'free' ? t('plan.current') : t('plan.active')}
-          </Badge>
-        </div>
-        <div className="flex flex-1 items-center gap-6 sm:max-w-sm">
-          <UsageMeter
-            label={t('plan.courses')}
-            current={totalCourses || 0}
-            limit={planLimits.max_courses ?? 5}
-          />
-          <UsageMeter
-            label={t('plan.students')}
-            current={studentCount || 0}
-            limit={planLimits.max_students ?? 50}
-          />
-        </div>
-      </div>
+      {/* Stats Grid */}
 
       {/* Stats Grid — clean, no color noise */}
       <div data-tour="admin-stats" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2" data-testid="admin-stats-grid">

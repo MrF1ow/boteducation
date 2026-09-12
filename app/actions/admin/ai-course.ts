@@ -8,8 +8,6 @@ import { AI_MODELS } from '@/lib/ai/config'
 import { createAdminClient, type ActionResult } from '@/lib/supabase/admin'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
-import { checkCourseLimit } from '@/app/actions/teacher/courses'
-import { courseLimitMessage, isPlanLimitError } from '@/lib/billing/plan-limit-error'
 import { aiGenerationLimiter } from '@/lib/rate-limit'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track } from '@/lib/analytics/server'
@@ -121,13 +119,6 @@ export async function generateStarterCourse(
       )
     }
 
-    // Same plan-limit gate as manual course creation — fail before spending
-    // tokens so free-plan owners see the upgrade message, not a silent error.
-    const limitCheck = await checkCourseLimit()
-    if (!limitCheck.canCreate) {
-      throw new Error(courseLimitMessage(limitCheck))
-    }
-
     analyticsCtx = { userId, tenantId, role }
     generationStartedAt = Date.now()
     await track(
@@ -172,10 +163,6 @@ export async function generateStarterCourse(
       .single()
 
     if (courseError) {
-      // Trigger-level rejection (#658) — same copy as the pre-check above.
-      if (isPlanLimitError(courseError)) {
-        throw new Error(courseLimitMessage(await checkCourseLimit()))
-      }
       throw courseError
     }
 

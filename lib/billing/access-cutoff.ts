@@ -36,12 +36,8 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { sendEmail } from '@/lib/email/send'
-import {
-  accessCutoffWarningTemplate,
-  type AccessCutoffStage,
-} from '@/lib/email/templates/access-cutoff-warning'
-import { countTenantUsage, computePlanLimitViolations, type PlanLimitViolation } from '@/lib/billing/plan-limits'
-import { getTenantAdminEmails } from '@/lib/billing/tenant-admins'
+import { type AccessCutoffStage } from '@/lib/email/templates/access-cutoff-warning'
+import { type PlanLimitViolation } from '@/lib/billing/plan-limits'
 
 export const ACCESS_CUTOFF_GRACE_DAYS = 14
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -136,208 +132,16 @@ export function dueCutoffNotificationStage(input: {
   return reached.find((stage) => !sent.has(stage)) ?? null
 }
 
-function formatViolationReasons(violations: PlanLimitViolation[], planName: string): string[] {
-  return violations.map((v) =>
-    v.resource === 'courses'
-      ? `${v.current} active courses exceed the ${planName} plan's limit of ${v.max}`
-      : `${v.current} active students exceed the ${planName} plan's limit of ${v.max}`
-  )
-}
-
-/** Which rungs the ledger already holds for this exact cutoff timestamp. */
-async function fetchSentStages(
-  admin: SupabaseClient,
-  tenantId: string,
-  cutoffAt: string
-): Promise<AccessCutoffStage[]> {
-  const { data } = await admin
-    .from('access_cutoff_notifications')
-    .select('stage')
-    .eq('tenant_id', tenantId)
-    .eq('cutoff_at', cutoffAt)
-
-  return ((data as { stage: AccessCutoffStage }[] | null) ?? []).map((row) => row.stage)
-}
-
 /**
- * Send one rung to every tenant admin, then record it.
- *
- * The ledger row is written only when at least one address actually received
- * the mail. A rung nobody received stays unrecorded so the next sweep tries
- * again — the difference between "we told them" and "we attempted to tell
- * them" is the whole of #517's first gap.
- *
- * Delivery is judged on `sendEmail`'s boolean, not on whether it threw:
- * `lib/email/send.ts` swallows both a missing Mailgun config and a Mailgun API
- * error and returns `false`. #494's `try/catch` around the send was therefore
- * near-decorative — a dead mail provider produced a silent no-op that looked
- * exactly like success. Only `true` counts.
- *
- * #550: the ledger write is part of delivery, not bookkeeping after it. This
- * function used to log an upsert error and return `{ delivered: true }`
- * anyway, which inverted #517's whole point — the rung stayed unrecorded, so
- * `dueCutoffNotificationStage` re-derived it on the next sweep and every
- * tenant admin got the identical email daily until the cutoff cleared, while
- * the cron counted each repeat under `notified` and reported a healthy run.
- * RLS on `access_cutoff_notifications` is enabled with no policy
- * (`20260725100000:45`), so any non-service-role caller hit this every time.
- * Reporting `delivered: false` costs at most one extra send next sweep, which
- * is strictly better than an unbounded daily repeat that looks like success.
- */
-async function deliverCutoffStage(
-  admin: SupabaseClient,
-  tenantId: string,
-  stage: AccessCutoffStage,
-  ctx: {
-    cutoffAt: string
-    schoolName: string
-    planName: string
-    violations: PlanLimitViolation[]
-    sendEmailFn: typeof sendEmail
-  }
-): Promise<{ delivered: boolean }> {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.example.com'
-  const template = accessCutoffWarningTemplate({
-    stage,
-    schoolName: ctx.schoolName,
-    planName: ctx.planName,
-    reasons: formatViolationReasons(ctx.violations, ctx.planName),
-    cutoffDate: new Date(ctx.cutoffAt).toLocaleDateString('en-US', { dateStyle: 'long' }),
-    billingUrl: `${appUrl}/dashboard/admin/billing`,
-  })
-
-  const emails = await getTenantAdminEmails(admin, tenantId)
-  let recipientCount = 0
-  for (const to of emails) {
-    try {
-      if ((await ctx.sendEmailFn({ to, ...template })) === true) recipientCount++
-      else console.error(`reconcileAccessCutoff: ${stage} email not delivered to ${to}`)
-    } catch (err) {
-      console.error(`reconcileAccessCutoff: ${stage} email send failed`, err)
-    }
-  }
-
-  if (recipientCount === 0) {
-    // Either the tenant has no active admin at all, or no send succeeded.
-    // Both are worth retrying tomorrow; neither counts as delivered.
-    console.error(
-      `reconcileAccessCutoff: ${stage} notification not delivered for tenant ${tenantId} (${emails.length} candidate recipients)`
-    )
-    return { delivered: false }
-  }
-
-  // The unique (tenant_id, cutoff_at, stage) constraint is what actually
-  // prevents repeats; ignoreDuplicates turns a race between the sweep and an
-  // event-driven reconcile into a no-op rather than an error.
-  const { error } = await admin
-    .from('access_cutoff_notifications')
-    .upsert(
-      { tenant_id: tenantId, cutoff_at: ctx.cutoffAt, stage, recipient_count: recipientCount },
-      { onConflict: 'tenant_id,cutoff_at,stage', ignoreDuplicates: true }
-    )
-
-  if (error) {
-    console.error('reconcileAccessCutoff: ledger write failed', error)
-    return { delivered: false }
-  }
-
-  return { delivered: true }
-}
-
-/**
- * Fetch a tenant's current plan/usage, decide, and apply: write
- * `access_cutoff_at` and (on `schedule`) email the tenant's admins with the
- * exact date and reasons. Safe to call from any plan-state transition —
- * a no-op when nothing needs to change.
- *
- * With `notifyDueStages` (the daily sweep passes it) it additionally sends
- * whichever rung of the reminder ladder is due for an already-scheduled
- * cutoff. Off by default so user-facing actions — joining a school, creating
- * a course — never pay email latency for a reminder the cron sends anyway.
+ * Fetch a tenant's current plan/usage, decide, and apply.
+ * Self-hosted leftover cleanup PR-01: never schedule or write cutoff.
  */
 export async function reconcileAccessCutoff(
-  admin: SupabaseClient,
-  tenantId: string,
-  opts?: { sendEmailFn?: typeof sendEmail; now?: Date; notifyDueStages?: boolean }
+  _admin: SupabaseClient,
+  _tenantId: string,
+  _opts?: { sendEmailFn?: typeof sendEmail; now?: Date; notifyDueStages?: boolean }
 ): Promise<AccessCutoffDecision> {
-  const sendEmailFn = opts?.sendEmailFn ?? sendEmail
-  const now = opts?.now ?? new Date()
-
-  const { data: tenant } = await admin
-    .from('tenants')
-    .select('name, plan, access_cutoff_at')
-    .eq('id', tenantId)
-    .maybeSingle()
-
-  if (!tenant) return { action: 'none' }
-
-  const [{ data: plan }, usage] = await Promise.all([
-    admin
-      .from('platform_plans')
-      .select('name, limits')
-      .eq('slug', tenant.plan || 'free')
-      .maybeSingle(),
-    countTenantUsage(admin, tenantId),
-  ])
-
-  const violations = computePlanLimitViolations(
-    usage,
-    (plan?.limits as { max_courses?: number; max_students?: number } | null) ?? null
-  )
-
-  const decision = decideAccessCutoffAction({
-    violations,
-    currentCutoffAt: tenant.access_cutoff_at,
-    now,
-    // A missing `platform_plans` row means the limits are unknown, not met
-    // (#550 §3) — enough to skip scheduling, never enough to lift a cutoff.
-    limitsKnown: !!plan,
-  })
-
-  if (decision.action !== 'none') {
-    await admin
-      .from('tenants')
-      .update({ access_cutoff_at: decision.cutoffAt ?? null, updated_at: now.toISOString() })
-      .eq('id', tenantId)
-  }
-
-  // The cutoff in force after this call: freshly scheduled, or the one already
-  // on the row that survived a `none` decision (still over limit).
-  const effectiveCutoffAt =
-    decision.action === 'schedule'
-      ? decision.cutoffAt!
-      : decision.action === 'clear'
-        ? null
-        : tenant.access_cutoff_at
-
-  if (!effectiveCutoffAt) return decision
-
-  // Both paths consult the ledger (#550). The schedule branch used to force
-  // `'scheduled'` outright, so a cron sweep racing a plan change sent the first
-  // rung twice — `ignoreDuplicates` kept the ledger clean but two identical
-  // emails had already left. Going through the ladder costs one indexed read
-  // and needs no special case: on a fresh 14-day cutoff `scheduled` is the only
-  // rung reached, so it is returned when unsent and `null` when already sent.
-  const notifying = decision.action === 'schedule' || opts?.notifyDueStages === true
-  const stage: AccessCutoffStage | null = notifying
-    ? dueCutoffNotificationStage({
-        cutoffAt: effectiveCutoffAt,
-        sentStages: await fetchSentStages(admin, tenantId, effectiveCutoffAt),
-        now,
-      })
-    : null
-
-  if (!stage) return decision
-
-  const { delivered } = await deliverCutoffStage(admin, tenantId, stage, {
-    cutoffAt: effectiveCutoffAt,
-    schoolName: tenant.name || 'your school',
-    planName: plan?.name || tenant.plan || 'Free',
-    violations,
-    sendEmailFn,
-  })
-
-  return delivered ? { ...decision, notifiedStage: stage } : { ...decision, notifyFailed: true }
+  return { action: 'none' }
 }
 
 /**

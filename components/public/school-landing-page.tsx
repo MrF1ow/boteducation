@@ -2,7 +2,6 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ArrowRight, BookOpen, GraduationCap } from "lucide-react"
 import { type Tenant } from "@/lib/supabase/tenant"
-import { hasPlanFeature } from "@/lib/plans/server"
 import { getTranslations } from "next-intl/server"
 
 interface Product {
@@ -21,10 +20,7 @@ interface Props {
 
 export async function SchoolLandingPage({ tenant, products }: Props) {
   const t = await getTranslations('schoolLanding')
-  // Brand colour is `custom_branding` (Business+, #662); below that the public
-  // page uses the platform accent like the rest of the app.
-  const accentColor =
-    ((await hasPlanFeature(tenant.id, 'custom_branding')) ? tenant.primary_color : '') || '#3B82F6'
+  const accentColor = tenant.primary_color || '#3B82F6'
 
   return (
     <div className="flex flex-col min-h-screen bg-[#0A0A0A] overflow-hidden">
