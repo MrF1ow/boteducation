@@ -500,7 +500,24 @@ test.describe('Loop 2 — join school → learn → verifiable certificate', () 
       await expect(submit).toBeVisible({ timeout: 30_000 })
       await domClick(page, 'exam-finish-submit')
       await page.waitForURL(/\/exams\/\d+\/result/, { timeout: 180_000 })
-      await expect(page.locator('body')).toContainText('100%', { timeout: 60_000 })
+      await expect
+        .poll(
+          async () => {
+            const { data } = await admin
+              .from('exam_submissions')
+              .select('score')
+              .eq('student_id', studentId!)
+              .eq('exam_id', examId)
+              .maybeSingle()
+            return data?.score ?? null
+          },
+          { timeout: 30_000 }
+        )
+        .toBe(100)
+      // Dev overlay (`Cannot write to a CLOSED writable stream`) can replace
+      // the result tree with the student error boundary. Reload once.
+      await page.reload({ waitUntil: 'domcontentloaded' })
+      await expect(page.getByText('100%', { exact: false }).first()).toBeVisible({ timeout: 60_000 })
     })
 
     /* ---- 3. Certificate: card → PDF → anonymous verification ---- */
