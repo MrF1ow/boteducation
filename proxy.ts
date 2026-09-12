@@ -9,26 +9,6 @@ import { isRetiredMarketingPath } from '@/lib/auth/retired-marketing-path'
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
-async function checkSuperAdmin(userId: string): Promise<boolean> {
-  try {
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/super_admins?user_id=eq.${userId}&select=user_id&limit=1`,
-      {
-        headers: {
-          apikey: SUPABASE_SERVICE_ROLE_KEY,
-          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-          Accept: 'application/json',
-        },
-      }
-    )
-    if (!res.ok) return false
-    const rows = await res.json()
-    return Array.isArray(rows) && rows.length > 0
-  } catch {
-    return false
-  }
-}
-
 const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001'
 
 // Short-TTL in-memory cache for tenant slug -> {id, status} lookups.
@@ -470,22 +450,6 @@ export default async function proxy(request: NextRequest) {
     } catch {
       // Admin update or refresh failed — page will work on next reload
     }
-  }
-
-  // Super admin platform guard — /platform/* requires super_admins membership
-  if (normalizedPath.startsWith('/platform')) {
-    const isSA = await checkSuperAdmin(user.id)
-    if (!isSA) {
-      const loginUrl = publicRedirectUrl(request, `/${locale}/auth/login`)
-      return NextResponse.redirect(loginUrl)
-    }
-    // Allow super admin through — bypass tenant membership checks
-    const finalPlatformResponse = intlResponse
-    for (const cookie of supabaseResponse.headers.getSetCookie()) {
-      finalPlatformResponse.headers.append('set-cookie', cookie)
-    }
-    finalPlatformResponse.headers.set('x-tenant-id', tenantId)
-    return finalPlatformResponse
   }
 
   // Role Checks

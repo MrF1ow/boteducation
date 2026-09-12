@@ -10,6 +10,7 @@ const RETIRED_MARKETING_PATHS = [
   '/platform-pricing',
   '/products',
   '/checkout',
+  '/platform',
 ] as const
 
 /** Locale-stripped paths that used to be the SaaS/storefront public face. */

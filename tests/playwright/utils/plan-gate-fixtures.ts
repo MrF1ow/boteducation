@@ -1,16 +1,9 @@
 /**
- * Shared fixtures for the plan-gate regression specs (#296 Phase 5).
+ * Shared fixtures for leftover plan-gate and commerce specs.
  *
- * Every spec gets its OWN tenant and its OWN throwaway plan row so the files
- * can run under CI's `fullyParallel` without stepping on each other, and so
- * the seeded default / code-academy tenants — load-bearing for a dozen other
- * specs — are never moved off their plan.
- *
- * The throwaway plan is the trick that keeps these specs cheap: the DB
- * triggers (#658), `getTenantPlanLimits` and the cutoff reconcile all read
- * `platform_plans.limits` by `tenants.plan` slug with NO `is_active` filter,
- * so a hidden plan with `max_courses: 1` puts a tenant "at the cap" with one
- * row instead of fifty seeded students.
+ * Course and student caps are gone. `get_tenant_plan_usage` was dropped.
+ * Specs that still import this file own their own tenant so they do not move
+ * seeded Default School / Code Academy rows.
  */
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { Page } from '@playwright/test'
@@ -148,9 +141,21 @@ export interface Usage {
 }
 
 export async function usageOf(admin: SupabaseClient, tenantId: string): Promise<Usage> {
-  const { data, error } = await admin.rpc('get_tenant_plan_usage', { _tenant_id: tenantId })
-  if (error) throw error
-  return data as Usage
+  const [{ count: courses }, { count: students }] = await Promise.all([
+    admin.from('courses').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).neq('status', 'archived'),
+    admin
+      .from('tenant_users')
+      .select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .eq('role', 'student')
+      .eq('status', 'active'),
+  ])
+  return {
+    courses: courses ?? 0,
+    students: students ?? 0,
+    max_courses: -1,
+    max_students: -1,
+  }
 }
 
 export async function tenantRow(admin: SupabaseClient, tenantId: string) {
@@ -173,13 +178,21 @@ export interface SweepResult {
   notifyFailures: number
 }
 
-/** GET `/api/cron/enforce-plan-limits` the way pg_cron and GitHub do. */
+/** GET `/api/cron/enforce-plan-limits`. Auth then 204. No cutoff writes. */
 export async function runEnforceSweep(request: import('@playwright/test').APIRequestContext): Promise<SweepResult> {
   const res = await request.get(`${BASE}/api/cron/enforce-plan-limits`, {
     headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
   })
-  expect(res.status(), await res.text()).toBe(200)
-  return (await res.json()) as SweepResult
+  expect(res.status(), await res.text()).toBe(204)
+  return {
+    success: true,
+    scheduled: 0,
+    cleared: 0,
+    none: 0,
+    errors: 0,
+    notified: {},
+    notifyFailures: 0,
+  }
 }
 
 /**

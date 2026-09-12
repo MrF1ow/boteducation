@@ -72,7 +72,7 @@ export default function PromptTemplatesPage() {
   useEffect(() => {
     // Mount-time load. Awaiting a resolved promise first moves every setState
     // into an async continuation, which is what react-hooks/set-state-in-effect
-    // asks for (same pattern as plan-change-dialog).
+    // asks for.
     void Promise.resolve().then(fetchTemplates)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

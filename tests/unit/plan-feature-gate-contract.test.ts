@@ -25,6 +25,7 @@ const ENFORCED_ELSEWHERE: Record<string, string> = {
   custom_domain: 'self-hosted leftover cleanup PR-01 — Cloudflare DNS errors only',
   ai_grading: 'self-hosted leftover cleanup PR-01 — grading is always allowed',
   analytics: 'self-hosted leftover cleanup PR-01 — analytics pages always render',
+  remove_branding: 'self-hosted leftover cleanup PR-04 — public Powered-by banner is gone',
 }
 
 const TIER_HELPERS: Record<string, string[]> = {

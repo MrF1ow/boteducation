@@ -145,7 +145,7 @@ All passwords are `password123`. Log in on the subdomain that matches the accoun
 | `creator@codeacademy.com` | Code Academy Pro | admin | http://code-academy.lvh.me:3000 |
 | `alice@student.com` | Code Academy Pro | student | http://code-academy.lvh.me:3000 |
 
-`owner@e2etest.com` also has a `super_admins` row, so it can reach the platform panel at `/platform/*` (super-admin routing is independent of tenant role).
+`owner@e2etest.com` also has a `super_admins` row. `/platform` is retired on this fork. That account still uses the school admin dashboard.
 
 Email confirmation is **disabled** locally (`enable_confirmations = false`), so a fresh signup at `/auth/sign-up` logs straight in. Any mail the app does send lands in Mailpit at http://127.0.0.1:54324.
 

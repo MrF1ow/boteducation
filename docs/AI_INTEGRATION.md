@@ -263,7 +263,7 @@ Aristotle has its own prompt builder in `lib/ai/aristotle-prompt.ts` due to the 
 | AI Grading | `pro` or above |
 | Voice Exercises | `pro` or above |
 
-Feature gating is enforced via `get_plan_features(_tenant_id)` RPC and the `<FeatureGate>` component.
+Checkpoint AI quotas still read `get_plan_features(_tenant_id)`. Missing or zero quotas are treated as unlimited. There is no `<FeatureGate>` component on this fork.
 
 ---
 

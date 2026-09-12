@@ -28,7 +28,7 @@ test.describe('Plan feature gates (#662)', () => {
     const { data } = await admin.from('platform_plans').select('slug, features').order('sort_order')
     const bySlug = Object.fromEntries((data ?? []).map((p) => [p.slug, p.features as Record<string, unknown>]))
     for (const slug of ['free', 'starter', 'pro', 'business', 'enterprise']) {
-      for (const key of ['community', 'remove_branding', 'voice_exercises', 'landing_pages', 'api_access']) {
+      for (const key of ['remove_branding', 'voice_exercises', 'landing_pages', 'api_access']) {
         expect(bySlug[slug], `${slug}.${key}`).toHaveProperty(key)
       }
       expect(bySlug[slug].api_access, `${slug}.api_access`).toBe(true)

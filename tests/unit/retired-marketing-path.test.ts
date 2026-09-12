@@ -16,6 +16,10 @@ describe('isRetiredMarketingPath', () => {
     '/p/home',
     '/pricing',
     '/pricing/checkout',
+    '/platform',
+    '/platform/billing',
+    '/checkout',
+    '/platform-pricing',
   ])(
     'treats %s as retired marketing',
     (path) => {

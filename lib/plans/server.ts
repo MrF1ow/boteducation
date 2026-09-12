@@ -1,16 +1,17 @@
 /**
  * Server-side plan feature gates (issue #662).
  *
- * `platform_plans.features` is what the pricing page sells; until #662 it was
- * enforced by `usePlanFeatures()` in the browser and by bespoke `if` blocks on
- * a handful of pages, never at the action or route that does the work. This
- * module is the one place the server asks "may this tenant use X?".
+ * `platform_plans.features` used to be what a SaaS pricing page sold. This
+ * self-hosted fork does not sell platform plans. Leftover helpers here still
+ * read `tenants.plan` for certificate/analytics tiers that some teacher
+ * screens still consult. Do not add new `requirePlanFeature` sites or
+ * dashboard upgrade CTAs.
  *
  * Data path: `tenants.plan` → `platform_plans` by slug, read with the
  * service-role client and deliberately WITHOUT the `is_active` filter — the
  * same rule `getTenantPlanLimits()` follows (retiring a plan must not change
  * what its subscribers may do). Note this differs from the `get_plan_features`
- * RPC, which filters on `is_active`; the RPC stays for the client hook.
+ * RPC, which filters on `is_active`.
  *
  * Defaults are closed: a tenant with no plan row, or a plan without the key,
  * does NOT have the feature. `20260901170000_backfill_plan_feature_keys.sql`

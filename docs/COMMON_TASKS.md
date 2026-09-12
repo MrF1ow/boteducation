@@ -258,39 +258,6 @@ import { Button } from '@/components/ui/button'
 </DropdownMenuTrigger>
 ```
 
-### Feature Gating
-
-#### Component-based gating
-```typescript
-import { FeatureGate } from '@/components/shared/feature-gate'
-
-// Only renders children if the tenant's plan includes the feature
-<FeatureGate feature="landing_pages">
-  <LandingPageBuilder />
-</FeatureGate>
-```
-
-#### Hook-based gating
-```typescript
-'use client'
-
-import { usePlanFeatures } from '@/lib/hooks/use-plan-features'
-
-export function MyComponent() {
-  const { features, isLoading } = usePlanFeatures()
-
-  if (isLoading) return <Spinner />
-
-  return (
-    <div>
-      <p>Current plan: {features.plan_name}</p>
-      <p>Course limit: {features.max_courses}</p>
-      {features.has_landing_pages && <LandingPageLink />}
-    </div>
-  )
-}
-```
-
 ### Basic Page Layout
 ```typescript
 export default function Page() {
