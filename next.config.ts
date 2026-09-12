@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 import createNextIntlPlugin from 'next-intl/plugin';
 import { withSentryConfig } from "@sentry/nextjs";
 import { supabaseStorageRemotePatterns } from './lib/images/supabase-storage-remote-patterns';
+import { RETIRED_STOREFRONT_PATHS } from './lib/auth/retired-marketing-path';
 
 const withNextIntl = createNextIntlPlugin('./i18n.ts');
 
@@ -23,7 +24,7 @@ const COMMERCE_GONE_PATHS = [
   '/dashboard/admin/landing-page',
   '/dashboard/teacher/revenue',
   '/checkout',
-  '/pricing',
+  ...RETIRED_STOREFRONT_PATHS,
   '/platform-pricing',
   '/products',
   '/platform',

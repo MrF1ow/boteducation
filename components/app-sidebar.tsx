@@ -177,12 +177,7 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                         { title: t('progressReport'), href: "/dashboard/student/progress", tourId: 'sidebar-progress' },
                     ],
                 },
-                {
-                    title: t('browseCourses'), href: "/dashboard/student/browse", icon: IconSearch, tourId: 'sidebar-browse',
-                    items: [
-                        { title: t('courseCatalog'), href: "/courses" },
-                    ],
-                },
+                { title: t('browseCourses'), href: "/dashboard/student/browse", icon: IconSearch, tourId: 'sidebar-browse' },
                 { title: t('community'), href: "/dashboard/student/community", icon: IconMessages },
                 { title: t('aiAssistant'), href: "/dashboard/student/ai-assistant", icon: IconSparkles },
             ],

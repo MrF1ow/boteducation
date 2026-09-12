@@ -62,6 +62,7 @@ const BOUNDING_TOKENS = ['.range(', '.single(', '.maybeSingle(', '.limit(', 'hea
  */
 const KNOWN_UNBOUNDED: Record<string, string> = {
   // scoped: a single user's own rows
+  'app/[locale]/dashboard/student/browse/page.tsx::enrollments': 'scoped — one user’s enrolments',
   'app/[locale]/dashboard/student/courses/page.tsx::enrollments': 'scoped — one user’s enrolments',
   'app/[locale]/dashboard/student/page.tsx::enrollments': 'scoped — one user’s enrolments',
   'app/[locale]/dashboard/student/progress/page.tsx::enrollments': 'scoped — one user’s enrolments',

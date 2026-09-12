@@ -630,7 +630,7 @@ export function registerStudentTools(server: LmsServer) {
     {
       name: "lms_browse_catalog",
       description:
-        "Browse the school's published course catalog. Each course reports `enrolled` (explicitly enrolled — appears in lms_my_learning), `has_access` (entitled to view content), and `covered_by_plan` (an active subscription covers it — use lms_enroll_in_course to enroll). Purchases happen in the app.",
+        "Browse the school's published course catalog. Each course reports `enrolled` (explicitly enrolled — appears in lms_my_learning), `has_access` (entitled to view content), and `covered_by_plan` (always true for this school's published courses — use lms_enroll_in_course to enroll). Tenant members may enroll without a subscription.",
       schema: z.object({
         limit: PaginationSchema.limit,
         offset: PaginationSchema.offset,
@@ -691,7 +691,7 @@ export function registerStudentTools(server: LmsServer) {
           }
         }
 
-        const [coursesRes, entitlementsRes, enrollmentsRes, subsRes] = await Promise.all([
+        const [coursesRes, entitlementsRes, enrollmentsRes] = await Promise.all([
           coursesQuery,
           // entitlements is the access source of truth (course-access.ts).
           supabase
@@ -706,13 +706,6 @@ export function registerStudentTools(server: LmsServer) {
             .eq("user_id", userId)
             .eq("tenant_id", tenantId)
             .eq("status", "active"),
-          supabase
-            .from("subscriptions")
-            .select("subscription_id, plan_id, end_date")
-            .eq("user_id", userId)
-            .eq("tenant_id", tenantId)
-            .eq("subscription_status", "active")
-            .gte("end_date", nowIso),
         ]);
 
         if (coursesRes.error)
@@ -727,18 +720,6 @@ export function registerStudentTools(server: LmsServer) {
         const enrolledSet = new Set(
           (enrollmentsRes.data ?? []).map((e) => e.course_id as number)
         );
-
-        const planIds = (subsRes.data ?? []).map((s) => s.plan_id as number);
-        let planCovered = new Set<number>();
-        if (planIds.length > 0) {
-          const { data: planCourses } = await supabase
-            .from("plan_courses")
-            .select("course_id")
-            .in("plan_id", planIds);
-          planCovered = new Set(
-            (planCourses ?? []).map((pc) => pc.course_id as number)
-          );
-        }
 
         const catalogCourseIds = (coursesRes.data ?? []).map(
           (c) => c.course_id as number
@@ -827,7 +808,7 @@ export function registerStudentTools(server: LmsServer) {
             lesson_count: lessonCounts.get(c.course_id as number) ?? 0,
             enrolled: enrolledSet.has(c.course_id),
             has_access: accessible.has(c.course_id) || enrolledSet.has(c.course_id),
-            covered_by_plan: planCovered.has(c.course_id),
+            covered_by_plan: true,
             // null = not individually for sale (no active product covers it).
             price: priced ? priced.price : null,
             currency: priced ? priced.currency : null,
@@ -844,7 +825,7 @@ export function registerStudentTools(server: LmsServer) {
             limit: input.limit,
             has_more:
               (coursesRes.count ?? courses.length) > input.offset + courses.length,
-            has_subscription: planIds.length > 0,
+            has_subscription: false,
             courses,
           },
           output: text(

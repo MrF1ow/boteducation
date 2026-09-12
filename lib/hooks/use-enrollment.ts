@@ -3,10 +3,9 @@
 /**
  * Enrollment Hook
  *
- * Client-side hook for subscription holders to self-enroll in plan-covered
- * courses. Delegates to the self_enroll_subscription_course RPC, which creates
- * a `subscription` entitlement (SECURITY DEFINER, verifies the subscription
- * covers the course). See docs/ENTITLEMENTS_MIGRATION_PLAN.md.
+ * Client-side hook for tenant members to self-enroll in a published school
+ * course. Delegates to self_enroll_school_course (SECURITY DEFINER). No
+ * subscription row is required.
  */
 
 import { useState } from 'react'
@@ -23,7 +22,7 @@ export function useEnrollment() {
   const analytics = useAnalytics()
 
   /**
-   * Self-enroll the current user in a course covered by their subscription.
+   * Self-enroll the current user in a published course of their school.
    * @param courseId - Course to enroll in
    */
   const enrollInCourse = async (courseId: number) => {
@@ -32,7 +31,7 @@ export function useEnrollment() {
 
     try {
       const supabase = createClient()
-      const { error: rpcError } = await supabase.rpc('self_enroll_subscription_course', {
+      const { error: rpcError } = await supabase.rpc('self_enroll_school_course', {
         _course_id: courseId,
       })
 
@@ -40,13 +39,9 @@ export function useEnrollment() {
         throw new Error(rpcError.message)
       }
 
-      // The only visibility there is on subscription-driven access. This RPC
-      // bypasses checkout, every server action and every API route, so without
-      // this event a subscriber who works through ten courses is indistinguishable
-      // from one who never logged in. Fires on RPC success only.
       analytics.track(ANALYTICS_EVENTS.COURSE_SELF_ENROLLED, {
         course_id: courseId,
-        source: 'subscription',
+        source: 'membership',
       })
 
       toast.success('Successfully enrolled in course!')

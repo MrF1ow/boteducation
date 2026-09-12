@@ -66,7 +66,7 @@ export const ANALYTICS_EVENTS = {
   // ───────────────────────────────────────────────────────────────────────
   PRODUCT_VIEWED: 'product_viewed',
   CHECKOUT_STARTED: 'checkout_started',
-  /** Client-only hole in the money loop: `self_enroll_subscription_course` RPC. */
+  /** Client-only hole in the money loop: `self_enroll_school_course` RPC. */
   COURSE_SELF_ENROLLED: 'course_self_enrolled',
   /** Derived, nightly: `checkout_started` with no terminal event in 24h. */
   CHECKOUT_ABANDONED: 'checkout_abandoned',

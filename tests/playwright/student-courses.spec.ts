@@ -177,18 +177,15 @@ test.describe('Student Course Flows', () => {
       await expect(page.getByTestId('browse-title')).toBeVisible()
       await expect(page.getByTestId('browse-course-count')).toBeVisible()
 
-      // Regression test: BrowseCourseCard now uses EnrollmentStatus discriminated union
-      // instead of boolean props (isEnrolled, canEnroll, etc.)
-      // Course cards should render with action buttons in the footer
-      const courseLinks = page.locator('a[href*="/courses/"]')
-      const count = await courseLinks.count()
-      expect(count).toBeGreaterThan(0)
+      const courseCards = page.locator('[data-testid="browse-courses-page"] h3')
+      await expect(courseCards.first()).toBeVisible()
+      await expect(page.getByText(/Python for Beginners/i)).toHaveCount(0)
 
-      // At least one card should have an action button (Go to Course, Enroll, Subscribe, etc.)
       const actionButtons = page.locator(
-        'button:has-text("Go to Course"), button:has-text("Enroll"), button:has-text("Subscribe"), a:has-text("Go to Course")'
+        'button:has-text("Go to Course"), button:has-text("Enroll"), a:has-text("Go to Course")'
       )
       await expect(actionButtons.first()).toBeVisible({ timeout: 10_000 })
+      await expect(page.getByRole('link', { name: /subscribe|view plans/i })).toHaveCount(0)
     })
 
     test('enrolled courses show "Go to Course" or enrolled badge', async ({
