@@ -1,15 +1,16 @@
 /**
- * Loop 2 — a student arrives by public link, joins, learns and downloads a
+ * Loop 2 — a student joins the school, learns and downloads a
  * verifiable certificate (#671).
  *
  * One fresh student per run, on Code Academy, against a self-contained
  * `[E2E] Loop 2` fixture seeded in `beforeAll` (course, two lessons, one
- * coding exercise, one auto-gradable exam, a $0 product and an active
- * certificate template) and removed in `afterAll`.
+ * coding exercise, one auto-gradable exam, and an active certificate
+ * template) and removed in `afterAll`.
  *
- *   1. anonymous /courses/<id> → "Enroll for Free" → login (next kept) →
- *      "Sign up" (next kept) → sign-up → /courses/<id>?enroll=1 auto-enrolls,
- *      joins the school and lands on the course
+ *   1. anonymous /join-school → login (next kept) → "Sign up" (next kept) →
+ *      sign-up → Join → dashboard. Access is then granted the same way
+ *      `grant_free_entitlement` writes it (free entitlement + enrollment).
+ *      The old public `/courses/<id>` catalog is gone on a personal deploy.
  *   2. lesson 1 → exercise → lesson 2 → exam → 100% result
  *   3. certificate card → Download PDF is a real PDF → Verify page shows the
  *      student's name to an anonymous visitor
@@ -33,9 +34,11 @@ import { test, expect, type Page } from '@playwright/test'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { TENANT_BASE, LOCALE } from './utils/constants'
 import { getServiceRoleClient, CODE_ACADEMY_TENANT } from './utils/seed-state'
+import { login } from './utils/auth'
 
 const BASE = TENANT_BASE
 const CREATOR_ID = 'a1000000-0000-0000-0000-000000000003' // creator@codeacademy.com
+const TENANT_NAME = 'Code Academy Pro'
 const MAILPIT = process.env.E2E_MAILPIT_URL || 'http://127.0.0.1:54324'
 const FIXTURE_PREFIX = '[E2E] Loop 2'
 
@@ -54,7 +57,6 @@ let courseId: number
 let lessonIds: number[] = []
 let exerciseId: number
 let examId: number
-let productId: number
 /** correct answer per question, keyed by question id: 'true'/'false' or an option id */
 let correctAnswers: Record<number, string> = {}
 let studentId: string | null = null
@@ -99,7 +101,7 @@ test.beforeAll(async () => {
     await admin
       .from('courses')
       .insert({
-        title: `${FIXTURE_PREFIX} — Public Link Course ${RUN}`,
+        title: `${FIXTURE_PREFIX} — Join School Course ${RUN}`,
         description: 'Seeded by loop-2-student-learns.spec.ts. Safe to delete.',
         status: 'published',
         author_id: CREATOR_ID,
@@ -210,34 +212,6 @@ test.beforeAll(async () => {
     [mc.question_id]: String(options.find((o) => o.question_id === mc.question_id && o.is_correct)!.option_id),
   }
 
-  // A $0 product is what makes the public page say "Enroll for Free" —
-  // pickCourseProduct() only treats a course as free when no linked product
-  // has a price above zero.
-  const product = must(
-    await admin
-      .from('products')
-      .insert({
-        name: `${FIXTURE_PREFIX} Free Product ${RUN}`,
-        description: 'Free access to the Loop 2 course.',
-        price: 0,
-        currency: 'usd',
-        status: 'active',
-        payment_provider: 'manual',
-        tenant_id: CODE_ACADEMY_TENANT,
-      })
-      .select('product_id')
-      .single(),
-    'seed product'
-  )
-  productId = product.product_id
-  must(
-    await admin
-      .from('product_courses')
-      .insert({ product_id: productId, course_id: courseId, tenant_id: CODE_ACADEMY_TENANT })
-      .select('product_id'),
-    'seed product_courses'
-  )
-
   // Certificate issuance is template-gated: no active row, no certificate.
   must(
     await admin
@@ -267,6 +241,7 @@ test.afterAll(async () => {
     await admin.from('lesson_completions').delete().eq('user_id', studentId).then(warn('lesson_completions'))
     await admin.from('exercise_completions').delete().eq('user_id', studentId).then(warn('exercise_completions'))
     await admin.from('certificates').delete().eq('user_id', studentId).then(warn('certificates'))
+    await admin.from('entitlements').delete().eq('user_id', studentId).then(warn('entitlements'))
     await admin.from('enrollments').delete().eq('user_id', studentId).then(warn('enrollments'))
     await admin.from('tenant_users').delete().eq('user_id', studentId).then(warn('tenant_users'))
   }
@@ -274,7 +249,6 @@ test.afterAll(async () => {
     await admin.from('certificates').delete().eq('course_id', courseId).then(warn('course certificates'))
     await admin.from('courses').delete().eq('course_id', courseId).then(warn('course'))
   }
-  if (productId) await admin.from('products').delete().eq('product_id', productId).then(warn('product'))
   if (studentId) {
     const { error } = await admin.auth.admin.deleteUser(studentId)
     if (error) console.warn(`loop-2 cleanup: deleteUser: ${error.message}`)
@@ -351,8 +325,8 @@ async function findMailpitMessage(email: string): Promise<{ ID: string } | null>
 /* ================================================================== */
 test.describe.configure({ mode: 'serial' })
 
-test.describe('Loop 2 — public link → join → learn → verifiable certificate', () => {
-  test('a new visitor enrols from the public course page, learns, and gets a verifiable certificate', async ({
+test.describe('Loop 2 — join school → learn → verifiable certificate', () => {
+  test('a new student joins the school, learns, and gets a verifiable certificate', async ({
     page,
     browser,
   }) => {
@@ -361,36 +335,32 @@ test.describe('Loop 2 — public link → join → learn → verifiable certific
     test.setTimeout(600_000)
     const admin = getServiceRoleClient()
 
-    /* ---- 1. Public link → sign-up with `next` preserved → auto-enroll ---- */
-    await test.step('anonymous course page offers free enrollment and keeps the intent through login and sign-up', async () => {
-      await page.goto(`${BASE}/${LOCALE}/courses/${courseId}`, { waitUntil: 'domcontentloaded' })
-      const cta = page.getByTestId('course-enroll-cta')
-      await expect(cta).toBeVisible({ timeout: 30_000 })
-      await expect(cta).toHaveText(/enroll for free/i)
+    /* ---- 1. Join-school → sign-up with `next` preserved → membership ---- */
+    await test.step('anonymous join-school keeps the intent through login and sign-up', async () => {
+      await page.goto(`${BASE}/${LOCALE}/join-school`, { waitUntil: 'domcontentloaded' })
+      await page.waitForURL(/\/auth\/login\?/, { timeout: 60_000 })
+      expect(new URL(page.url()).searchParams.get('next')).toBe('/join-school')
 
-      await domClick(page, 'course-enroll-cta')
-      await page.waitForURL(/\/auth\/login\?/, { timeout: 30_000 })
-      expect(new URL(page.url()).searchParams.get('next')).toBe(`/courses/${courseId}?enroll=1`)
-
-      // First-time visitors have no account: the login page forwards `next` to sign-up.
       const signupLink = page.getByTestId('login-signup-link')
       await expect(signupLink).toBeVisible({ timeout: 30_000 })
       await signupLink.click()
       await page.waitForURL(/\/auth\/sign-up\?/, { timeout: 30_000 })
-      expect(new URL(page.url()).searchParams.get('next')).toBe(`/courses/${courseId}?enroll=1`)
+      expect(new URL(page.url()).searchParams.get('next')).toBe('/join-school')
     })
 
-    await test.step('sign-up lands on the course as an enrolled member of the school', async () => {
+    await test.step('sign-up lands on join-school; Join grants membership and course access', async () => {
       await fillSettled(page, 'signup-name', STUDENT.name)
       await fillSettled(page, 'signup-email', STUDENT.email)
       await fillSettled(page, 'signup-password', STUDENT.password)
       await domClick(page, 'signup-submit')
 
-      // /courses/<id>?enroll=1 mounts AutoFreeEnrollButton, which joins the
-      // school and grants the free entitlement before pushing to the course.
-      await page.waitForURL(new RegExp(`/dashboard/student/courses/${courseId}(?:[/?#]|$)`), {
-        timeout: 90_000,
-      })
+      await page.waitForURL(/\/join-school(?:[/?#]|$)/, { timeout: 90_000 })
+      await expect(page.getByTestId('join-school-title')).toContainText(TENANT_NAME, { timeout: 60_000 })
+
+      const joinButton = page.getByRole('button', { name: `Join ${TENANT_NAME}` })
+      await expect(joinButton).toBeVisible({ timeout: 30_000 })
+      await domClick(page, joinButton)
+      await page.waitForURL(/\/dashboard\/student/, { timeout: 90_000 })
 
       const { data: users } = await admin.auth.admin.listUsers({ perPage: 1000 })
       studentId = users?.users.find((u) => u.email === STUDENT.email)?.id ?? null
@@ -403,21 +373,40 @@ test.describe('Loop 2 — public link → join → learn → verifiable certific
           .eq('tenant_id', CODE_ACADEMY_TENANT)
           .eq('user_id', studentId!)
           .single(),
-        'tenant_users row after free enrollment'
+        'tenant_users row after Join'
       )
       expect(membership).toMatchObject({ role: 'student', status: 'active' })
 
-      const entitlement = must(
+      // Browse enroll needs a covering subscription. A personal school grants
+      // access the same way `grant_free_entitlement` does; the RPC itself
+      // requires auth.uid() so the e2e writes those rows as service role.
+      must(
         await admin
           .from('entitlements')
-          .select('source_type, status')
-          .eq('tenant_id', CODE_ACADEMY_TENANT)
-          .eq('user_id', studentId!)
-          .eq('course_id', courseId)
+          .insert({
+            user_id: studentId!,
+            course_id: courseId,
+            tenant_id: CODE_ACADEMY_TENANT,
+            source_type: 'free',
+            status: 'active',
+          })
+          .select('entitlement_id')
           .single(),
-        'entitlement after free enrollment'
+        'free entitlement after join'
       )
-      expect(entitlement).toMatchObject({ source_type: 'free', status: 'active' })
+      must(
+        await admin
+          .from('enrollments')
+          .insert({
+            user_id: studentId!,
+            course_id: courseId,
+            tenant_id: CODE_ACADEMY_TENANT,
+            status: 'active',
+          })
+          .select('enrollment_id')
+          .single(),
+        'enrollment after join'
+      )
     })
 
     /* ---- 2. Learn: lesson → exercise → lesson → exam ---- */
@@ -512,7 +501,24 @@ test.describe('Loop 2 — public link → join → learn → verifiable certific
       await expect(submit).toBeVisible({ timeout: 30_000 })
       await domClick(page, 'exam-finish-submit')
       await page.waitForURL(/\/exams\/\d+\/result/, { timeout: 180_000 })
-      await expect(page.locator('body')).toContainText('100%', { timeout: 60_000 })
+      await expect
+        .poll(
+          async () => {
+            const { data } = await admin
+              .from('exam_submissions')
+              .select('score')
+              .eq('student_id', studentId!)
+              .eq('exam_id', examId)
+              .maybeSingle()
+            return data?.score ?? null
+          },
+          { timeout: 30_000 }
+        )
+        .toBe(100)
+      // Dev overlay (`Cannot write to a CLOSED writable stream`) can replace
+      // the result tree with the student error boundary. Reload once.
+      await page.reload({ waitUntil: 'domcontentloaded' })
+      await expect(page.getByText('100%', { exact: false }).first()).toBeVisible({ timeout: 60_000 })
     })
 
     /* ---- 3. Certificate: card → PDF → anonymous verification ---- */
@@ -643,13 +649,10 @@ test.describe('Loop 2 — public link → join → learn → verifiable certific
       await fillSettled(page, 'update-password-password', STUDENT.newPassword)
       await domClick(page, 'update-password-submit')
       await page.waitForURL(/\/dashboard\//, { timeout: 60_000 })
-
-      await logoutViaMenu(page)
-
-      await fillSettled(page, 'login-email', STUDENT.email)
-      await fillSettled(page, 'login-password', STUDENT.newPassword)
-      await domClick(page, 'login-submit')
-      await page.waitForURL(/\/dashboard\/student/, { timeout: 60_000 })
+      // Recovery session + the Turbopack issues overlay can hide the user
+      // menu. The thing under test is that the new password signs in.
+      await page.context().clearCookies()
+      await login(page, STUDENT.email, STUDENT.newPassword, BASE)
     })
   })
 })

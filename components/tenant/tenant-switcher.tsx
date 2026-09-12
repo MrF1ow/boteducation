@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import { useTenant } from './tenant-provider'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -9,11 +8,10 @@ import {
   DropdownMenuItem,
   DropdownMenuGroup,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
-import { ChevronsUpDown, Plus, School } from 'lucide-react'
+import { ChevronsUpDown, School } from 'lucide-react'
 
 interface TenantOption {
   id: string
@@ -69,11 +67,6 @@ export function TenantSwitcher({ tenants }: { tenants: TenantOption[] }) {
             </DropdownMenuItem>
           ))}
         </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => window.location.href = '/create-school'}>
-          <Plus className="mr-2 h-4 w-4" />
-          Create New School
-        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

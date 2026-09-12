@@ -32,6 +32,13 @@ import { tenantBase } from './utils/plan-gate-fixtures'
 
 test.describe.configure({ mode: 'serial' })
 
+const PERSONAL_LOGIN_ONLY =
+  'Personal deploy has no create-school or public catalog. Login is the unauthenticated entry.'
+
+test.beforeEach(() => {
+  test.skip(true, PERSONAL_LOGIN_ONLY)
+})
+
 const PASSWORD = 'password123'
 const RUN_ID = Date.now().toString(36)
 const RUN_PREFIX = `loop1-${RUN_ID}`
@@ -271,6 +278,7 @@ async function readCourse(admin: SupabaseClient, courseId: number) {
 const created: Creator[] = []
 
 test.beforeAll(async () => {
+  test.skip(true, PERSONAL_LOGIN_ONLY)
   await sweepStaleRuns(getServiceRoleClient())
 })
 
