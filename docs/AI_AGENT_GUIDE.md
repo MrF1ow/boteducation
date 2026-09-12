@@ -4,13 +4,14 @@
 
 ## 🎯 Project Context
 
-You are working on **LMS V2**, a complete rebuild of a Learning Management System. This is a **greenfield project** starting fresh with modern best practices, not a legacy codebase refactor.
+You are working on **BotEducation**, a self-hosted school LMS. One school per deploy. Teachers create courses without a Free cap. Students browse this tenant's published courses and enroll without a school-sold subscription. Community is gone. Keep `entitlements` and `enrollments`.
 
 ### Key Facts
 - **Framework**: Next.js 16 (App Router, React 19)
 - **Database**: Supabase (PostgreSQL 15)
 - **UI**: Shadcn UI (base-mira theme)
 - **Priorities**: Student & Teacher UX > Everything else
+- **Not this product**: platform billing, `/pricing` storefronts, `/platform` operator consoles
 
 ### What Makes This Project Special
 - **Direct Database Queries via RLS** instead of server actions for CRUD
@@ -307,25 +308,28 @@ Signatures below are the real ones — verify with `pg_get_function_identity_arg
 1. **`enroll_user(_user_id uuid, _product_id integer)`**
    - Grants access to ALL courses linked to the product (loops through `product_courses`)
    - Writes to **`entitlements`** — the source of truth for access — inheriting `tenant_id` from the product
-   - Called automatically on successful payment
 
-2. **`has_course_access(_user_id uuid, _course_id integer)`**
+2. **`self_enroll_school_course(_course_id integer)`**
+   - Membership enroll for a published course on the caller's tenant
+   - Writes `entitlements` and `enrollments`. Does not require a `subscriptions` row
+
+3. **`has_course_access(_user_id uuid, _course_id integer)`**
    - The access check. Second arg is `integer` — cast `::int` from SQL
    - No staff branch: teachers/admins are not implicitly granted access here
 
-3. **`get_plan_features(_tenant_id uuid)`**
-   - Returns plan info, features (JSONB), and limits for the tenant
-   - Single source of truth for feature gating
+4. **`get_plan_features(_tenant_id uuid)`**
+   - Leftover RPC. Returns plan info, features, and limits
+   - Not a live product gate for course create or Browse enroll
    - `SECURITY DEFINER` — works regardless of caller's RLS context
 
-4. **`create_exam_submission(p_student_id uuid, p_exam_id integer, p_answers jsonb)`**
+5. **`create_exam_submission(p_student_id uuid, p_exam_id integer, p_answers jsonb)`**
    - Creates exam submission, returns `submission_id`
 
-5. **`save_exam_feedback(p_submission_id, p_exam_id, p_student_id, p_answers, p_overall_feedback, p_score, p_question_feedback, p_ai_model, p_processing_time_ms)`**
+6. **`save_exam_feedback(p_submission_id, p_exam_id, p_student_id, p_answers, p_overall_feedback, p_score, p_question_feedback, p_ai_model, p_processing_time_ms)`**
    - Saves AI feedback to the exam and updates the score
    - Nine params, all `p_`-prefixed
 
-6. **`award_xp(_user_id uuid, _action_type text, _xp_amount integer, _reference_id text, _reference_type text)`**
+7. **`award_xp(_user_id uuid, _action_type text, _xp_amount integer, _reference_id text, _reference_type text)`**
    - Awards XP for gamification actions; creates the gamification profile lazily
    - An overload takes a trailing `_tenant_id uuid` — trigger functions call that one
 
@@ -498,13 +502,10 @@ See [PHASE_5_SUMMARY.md](./PHASE_5_SUMMARY.md) for detailed implementation notes
 - AUTH.md for admin-only access patterns
 - DATABASE_SCHEMA.md for user management tables
 
-**Billing & monetization** → Check:
-- `docs/MONETIZATION.md` for full architecture reference
-- `app/actions/admin/billing.ts` for server actions
-- `lib/plans/features.ts` for plan types and `canAccessFeature()`
-- `lib/hooks/use-plan-features.ts` for client hook
-- `components/shared/feature-gate.tsx` for gating UI
-- `lib/currency.ts` for multi-currency support
+**Billing leftovers** → Check:
+- `docs/MONETIZATION.md` for what is retired
+- Do not import `BillingOverview`, `FeatureGate`, or `usePlanFeatures` (deleted)
+- Keep entitlements and enrollments. Do not add `/pricing` dashboard CTAs
 
 **Database queries** → Check:
 - DATABASE_SCHEMA.md for table structure and RLS policy patterns
@@ -527,22 +528,15 @@ See [PHASE_5_SUMMARY.md](./PHASE_5_SUMMARY.md) for detailed implementation notes
 - **`product_courses`** can have multiple rows per course — NEVER use `.single()`
 - **`crypto.randomUUID()`** fails on HTTP — use `nanoid()` instead
 
-### Feature Gating Pattern
+### Course access (not platform billing)
+
+Students who belong to the school enroll from Browse. Do not call `requirePlanFeature` or `get_plan_features` to refuse course create or enroll. Do not render `UpgradeNudge` as a `/pricing` CTA.
 
 ```typescript
-// Server-side: check plan features
-const { data: planInfo } = await adminClient.rpc('get_plan_features', { _tenant_id: tenantId })
-if (!planInfo?.features?.ai_grading) throw new Error('Requires Pro plan')
-
-// Client-side: use hook + gate component
-import { usePlanFeatures } from '@/lib/hooks/use-plan-features'
-import { FeatureGate } from '@/components/shared/feature-gate'
-
-const { plan, features, limits } = usePlanFeatures()
-<FeatureGate feature="ai_grading" plan={plan} features={features}>
-  <AIGradingPanel />
-</FeatureGate>
+const { error } = await supabase.rpc('self_enroll_school_course', { _course_id: courseId })
 ```
+
+`get_plan_features` and `lib/plans/server.ts` are leftovers. Certificate template design still reads `getCertificateTier()`. That is not an upgrade path.
 
 ## 🎯 Success Criteria
 
@@ -555,7 +549,7 @@ Your implementation is good if:
 - ✅ It handles errors gracefully
 - ✅ It respects user roles and permissions
 - ✅ It filters all queries by `tenant_id`
-- ✅ It checks plan limits for gated features
+- ✅ It does not reintroduce platform billing or course caps
 
 Your implementation needs work if:
 - ❌ It adds new patterns without justification

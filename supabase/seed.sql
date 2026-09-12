@@ -23,8 +23,8 @@
 --    always wins over whatever the original billing migration inserted;
 --    the migration's INSERT never included a `community` feature flag, which
 --    left the community feature 100% inaccessible on every plan/tenant —
---    see issue #291. Free = locked w/ upgrade nudge, Starter+ = accessible,
---    per the #291 spec.)
+--    see issue #291. Community and SaaS upgrade nudges are gone; these rows
+--    remain so leftover platform_plans joins still resolve.)
 -- ---------------------------------------------------------------------------
 INSERT INTO platform_plans (slug, name, description, price_monthly, price_yearly, transaction_fee_percent, sort_order, features, limits)
 VALUES
@@ -73,19 +73,15 @@ ON CONFLICT (slug) DO UPDATE SET
 -- 1. TENANTS
 -- ---------------------------------------------------------------------------
 
--- Default tenant (main platform / default school)
--- Created by migration 20260216200000 — kept here for completeness
--- Kept on the FREE plan on purpose: it's the baseline tenant for exercising plan-gating in
--- local dev and E2E (free-plan upgrade nudges, the landing-builder paid gate, etc.). Use a
--- paid tenant (e.g. Code Academy below, on `pro`) when you need gated features unlocked.
+-- Default School (main tenant at lvh.me). Plan slug is a leftover
+-- platform_plans row. Course caps and SaaS feature gates are not enforced.
 INSERT INTO tenants (id, slug, name, primary_color, secondary_color, plan, status, billing_status)
 VALUES ('00000000-0000-0000-0000-000000000001', 'default', 'Default School', '#2563eb', '#7c3aed', 'free', 'active', 'active')
 ON CONFLICT (id) DO NOTHING;
 
--- Code Academy — used for subdomain E2E tests (code-academy.lvh.me:3000)
--- On 'enterprise' (full plan, all features unlocked) so it's the go-to tenant
--- for testing gated features; Default School stays on 'free' (all gates
--- active) so upgrade-nudge / locked-feature UX is also covered. See #291.
+-- Code Academy — used for subdomain E2E tests (code-academy.lvh.me:3000).
+-- Plan slugs are leftover platform_plans rows. Course caps and feature gates
+-- are not enforced. Do not reintroduce Free course limits for Default School.
 INSERT INTO tenants (id, slug, name, primary_color, secondary_color, plan, status, billing_status)
 VALUES ('00000000-0000-0000-0000-000000000002', 'code-academy', 'Code Academy Pro', '#7c3aed', '#2563eb', 'enterprise', 'active', 'active')
 ON CONFLICT (id) DO UPDATE SET plan = EXCLUDED.plan, billing_status = EXCLUDED.billing_status;
@@ -613,7 +609,7 @@ ON CONFLICT DO NOTHING;
 -- (end_date = now + plan.duration_in_days = 30d) and grants entitlements for
 -- every plan_courses row (courses 2001 + 2002). Enrollment is NOT auto-created
 -- by design — alice self-enrolls via /browse (which calls
--- self_enroll_subscription_course()). Do NOT also insert the subscription
+-- self_enroll_school_course()). Do NOT also insert the subscription
 -- here: that collides with subscriptions_user_id_plan_id_key.
 -- ---------------------------------------------------------------------------
 INSERT INTO transactions (transaction_id, user_id, plan_id, amount, status, currency, tenant_id)

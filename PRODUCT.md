@@ -4,32 +4,27 @@
 
 product
 
-Default register for all design work. Two exceptions run in **brand** register and should be treated as such per task, without changing this default:
-
-- `app/[locale]/(public)/*` (landing, `/about`, `/pricing`, `/platform-pricing`, `/creators`, `/courses`, public product pages)
-- Puck landing-page blocks and anything the AI landing-page builder emits, since those are marketing surfaces authored by tenants
+Default register for all design work. Tenant theme tokens (primary, accent, logo) are the only brand overlay. Public SaaS marketing pages (`(public)/*`, `/pricing`, `/creators`, `/platform-pricing`) are retired. Do not add a storefront.
 
 ## Users
 
-Four groups, all first-class. They differ in session length, device, and tolerance for chrome.
+Three groups, all first-class. They differ in session length, device, and tolerance for chrome.
 
 **Students learning.** The core user. In a lesson, exercise, checkpoint, or exam, often for a long stretch, frequently on a phone, across LATAM and English-speaking markets. Their job: understand the material and prove they understood it. They are adults or older teens, not children. Bandwidth and device quality vary widely, so weight and latency are accessibility concerns here, not just performance ones.
 
-**Creators and solo educators.** Building and selling courses on their own subdomain. Their job: ship a course and get paid. Critically, they judge this platform by how it makes *them* look to *their* students. Every learner-facing surface is the creator's storefront, which means learner polish is a creator-retention feature.
+**Teachers.** Building courses for this school. Their job: ship a course, grade work, and see student progress. Learner-facing polish is still how the school looks to its students.
 
-**School admins and teachers.** Multi-staff operations: analytics, grading, enrollment, payouts, tenant settings, plan limits. Their job: see the state of the school and act on it. They scan, compare, and drill down. Density and scan-speed serve them better than whitespace.
+**School admins.** Multi-staff operations: analytics, grading, enrollment, tenant settings. Their job: see the state of the school and act on it. They scan, compare, and drill down. Density and scan-speed serve them better than whitespace.
 
-**Prospective buyers.** Creators and schools evaluating the platform on the public site before signing up. Short sessions, high skepticism, comparing against Teachable and Thinkific in one tab each.
-
-Platform super-admins exist (`/platform/*`) but are a small internal audience and never drive design decisions.
+This fork is one school per deploy. There is no public buyer funnel and no platform billing console.
 
 ## Product Purpose
 
-Multi-tenant LMS where every school operates as an independent tenant on its own subdomain with its own branding, students, and payment rails. Creators build block-editor courses with exercises, checkpoints, and AI-graded exams; students enroll, learn, and earn verifiable certificates; schools get analytics, payouts, and provider-agnostic payments built for markets where cards fail.
+Self-hosted school LMS. Teachers create courses without a Free cap. Students who belong to the school browse this tenant's published courses and enroll without buying a school-sold subscription. Access still lives in `entitlements`. Progress still lives in `enrollments`. Community is gone.
 
-The product exists because the LATAM independent-educator market is served badly: the incumbent hosted platforms assume US card payments and English-first UX, and the open-source alternatives look like 2009. Success means a solo educator in Caracas or Bogotá can stand up a school in under five minutes, take payment in whatever their students can actually pay with, and have the result look better than what a funded competitor ships.
+Local login still uses `lvh.me` tenant subdomains so a second seeded school can prove isolation. Production is one school.
 
-Open source, MIT, self-hostable. The codebase is also a reference implementation for multi-tenant Supabase RLS patterns, so it gets read by engineers as well as used by educators.
+Open source, MIT. The codebase is also a reference implementation for multi-tenant Supabase RLS patterns.
 
 ## Brand Personality
 
@@ -49,7 +44,7 @@ Bilingual by construction (en/es). Spanish is not a translation layer bolted on,
 
 **Cluttered enterprise LMS.** Moodle, Blackboard, Canvas. Dense nav trees, competing toolbars, tables with no hierarchy, five ways to reach the same page.
 
-**SaaS marketing cliché.** Gradient-text headlines, glassmorphic hero cards, purple-and-blue mesh gradients. Especially relevant to the public site and to anything the AI landing-page builder is allowed to emit.
+**SaaS marketing cliché.** Gradient-text headlines, glassmorphic hero cards, purple-and-blue mesh gradients. Do not reintroduce a public marketing site.
 
 ## Design Principles
 
@@ -57,13 +52,13 @@ Bilingual by construction (en/es). Spanish is not a translation layer bolted on,
 Take the pedagogical core of Duolingo and Khan Academy, visible progress, a clear next action, feedback that lands immediately, and reject their visual register entirely. Momentum is communicated through position, sequence, and state changes, not through rewards theater. Concretely: progress belongs in the layout (where you are in the sequence, what unlocks next), motion conveys the state change and then stops, and gamification surfaces read as a quiet ledger rather than a slot machine. If a learner surface would embarrass an adult professional in a coffee shop, it is wrong.
 
 **2. Density is a property of the surface, not the system.**
-One token set, two spacing and information-density registers. Learner surfaces (lesson, exercise, checkpoint, exam, browse) are calm, spacious, single-focus, one primary action visible. Staff surfaces (analytics, grading queues, payouts, enrollment, platform panel) are dense, comparative, and scan-first, and accept smaller type and tighter rows in exchange for seeing more at once. Never average the two into a compromise that serves neither.
+One token set, two spacing and information-density registers. Learner surfaces (lesson, exercise, checkpoint, exam, browse) are calm, spacious, single-focus, one primary action visible. Staff surfaces (analytics, grading queues, enrollment) are dense, comparative, and scan-first, and accept smaller type and tighter rows in exchange for seeing more at once. Never average the two into a compromise that serves neither.
 
 **3. The tenant supplies the brand, we supply the structure.**
 Tenants override the primary and accent colors through CSS custom properties, so no layout, hierarchy, or affordance may depend on a specific hue. Two schools must be recognizably the same product and recognizably different brands. Practically: contrast, emphasis, and state must survive an arbitrary tenant color, meaning color is never the only carrier of meaning, and every derived ink must be computed rather than hardcoded. This is not theoretical, it has already shipped as a bug (#569).
 
-**4. Every learner surface is the creator's storefront.**
-The creator is selling to their own students on our UI. A rough edge in a lesson player is not a learner annoyance, it is a churn risk for the paying customer. Weight learner-surface polish accordingly, above internal staff tooling, when effort has to be split.
+**4. Every learner surface is the school's classroom.**
+A rough edge in a lesson player is a learner annoyance and a trust cost for the school. Weight learner-surface polish accordingly, above internal staff tooling, when effort has to be split.
 
 **5. Never render absent, stale, or unearned state as if it were real.**
 Missing data shows as missing. Ungraded shows as ungraded, not as zero. Estimates are labeled as estimates. Empty states say what is actually true and what to do next rather than filling space with a plausible-looking placeholder. Money, grades, and progress are the three places where a confident-looking lie costs the most trust, and all three have already produced real bugs here (#567, #568). Design for the empty and error case in the same pass as the happy path, never as a follow-up.
@@ -79,14 +74,8 @@ Missing data shows as missing. Ungraded shows as ungraded, not as zero. Estimate
 - **Long-session legibility.** Learning surfaces carry the longest reading sessions in the product. Body copy stays at 65 to 75ch, and both light and dark themes are genuinely usable rather than one being an afterthought.
 - **Real-world devices and networks.** Mid-range Android and constrained mobile bandwidth are the assumed baseline for the LATAM student audience, not an edge case.
 
-## Plan tiers
+## Access, not platform billing
 
-What a plan unlocks is `platform_plans.features`, enforced on the server by `lib/plans/server.ts` (issue #662) and shown by `<UpgradeNudge/>` when refused. Two features are tiered rather than on/off:
+This school does not sell a platform plan. Course create has no Free cap. Browse enroll does not require a `subscriptions` row. Keep `entitlements` and `enrollments`. Do not add `/pricing` dashboard CTAs, `UpgradeNudge` links, or `BillingOverview`.
 
-- **Analytics.** `basic` (Starter): user growth, engagement and course popularity on the admin analytics page. `advanced` (Pro+): everything in basic plus revenue reporting, CSV export, and the per-course confusion hotspots page for teachers. Free has no analytics page.
-- **Certificates.** `basic` (Free): every course can auto-issue certificates, on the platform design. `custom` (Starter+): the template's colours, logo, signature image and QR toggle. A school never loses the ability to issue a certificate by being on Free.
-
-Two more rules that are product decisions, not accidents:
-
-- **Custom branding (Business+) is colours, theme presets, radius and font.** A school's logo, favicon and name apply on every plan — a school must stay recognisable to its own students. Below Business the tenant's colours are ignored in favour of the platform palette.
-- **The MCP server is open on every plan**, gated by role only. `api_access` is not a plan feature and does not appear in the pricing comparison.
+`platform_plans` rows still exist in the database as leftovers. Certificate template design still consults `getCertificateTier()` on some teacher screens. That is not an upgrade path. MCP is open, gated by role only.

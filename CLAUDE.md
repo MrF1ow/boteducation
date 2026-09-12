@@ -88,69 +88,46 @@ if (resource.tenant_id !== tenantId) throw new Error('Access denied')
 
 ### Server Actions vs Direct Queries
 
-Use **direct RLS queries** for all reads. Use **server actions** (in `app/actions/`: `admin/`, `teacher/`, `payment-requests.ts`, `join-school.ts`, `onboarding.ts`) only for multi-step mutations (payment processing, enrollment), service-role operations, or external API calls (Stripe, email).
+Use **direct RLS queries** for all reads. Use **server actions** (in `app/actions/`: `admin/`, `teacher/`, `join-school.ts`, `onboarding.ts`) only for multi-step mutations, service-role operations, or external API calls.
 
-### Payment Architecture
+### Course access
 
-Two separate Stripe integrations:
+Access lives in `entitlements` (`user_id`, `course_id`, `tenant_id`, `source_type`, `source_id`, `status`, `expires_at`). `enrollments` is a learning-progress record only (`user_id`, `course_id`, `status`, `tenant_id`, `enrollment_date`). Students who belong to the school self-enroll from `/dashboard/student/browse` via `self_enroll_school_course` (or the membership RPC PR-02 shipped). Keep those tables. Do not reintroduce course caps.
 
-| | School Billing (Platform) | Student Payments (Connect) |
-|--|--|--|
-| **Who pays** | School admin pays platform | Student pays school |
-| **Stripe mode** | Billing (Checkout + Subscriptions) | Connect (PaymentIntents) |
-| **Webhook** | `/api/billing/webhook/stripe` | `/api/stripe/webhook` |
-| **Env var** | `STRIPE_PLATFORM_WEBHOOK_SECRET` | `STRIPE_WEBHOOK_SECRET` |
-| **Customer ID** | `tenants.stripe_customer_id` | `profiles.stripe_customer_id` |
+Student storefronts, school billing dashboards, and `/platform` are retired (`COMMERCE_GONE_PATHS` in `next.config.ts`, `isRetiredMarketingPath` in `proxy.ts`). Leftover Stripe and `platform_plans` code may still exist under `lib/billing/` and `app/actions/platform/`. It is not a live product surface. Do not wire `UpgradeNudge`, `FeatureGate`, or `/pricing` CTAs back into the dashboard.
 
-Student payments have two flows, both produce a `transaction` and call `enroll_user()` RPC on success:
-- **Stripe Connect:** `app/api/stripe/create-payment-intent/route.ts` sets `application_fee_amount` (platform fee) + `transfer_data.destination` (school's account); revenue split in `revenue_splits` (default 20% platform / 80% school)
-- **Manual/offline:** student creates a `payment_requests` row (`app/actions/payment-requests.ts`) → admin confirms receipt → `enroll_user()` RPC
-
-Also supported (`products.payment_provider`): `paypal`, `lemonsqueezy`, `solana`, `solana_subs`, `binance` — see `docs/PROVIDER_AGNOSTIC_PAYMENTS_SPIKE.md`.
-
-**School billing is not Stripe-only either.** `POST /api/billing/checkout` runs on whichever provider has an active `platform_plan_prices` row and carries `supportsPlatformBillingCheckout` — Stripe, Lemon Squeezy, Binance Pay and Solana (#610). Two things follow that no Stripe-shaped code expects:
-- **The crypto rails have no subscription object.** One payment buys one period, `dispatchPlatformBillingEvent` derives `current_period_end` from the interval (`selfManagedPeriod`), and `/api/cron/expire-platform-subscriptions` reminds/graces/downgrades every rail with `selfManagedPeriod`, not just `manual`. A second checkout on the same crypto rail is a *renewal* and must not be blocked or supersede anything.
-- **Solana has no webhook and no redirect.** `/api/billing/webhook/solana` 404s by design; the QR page polls `/api/billing/solana/verify`, which proves the transfer on chain and dispatches through the same function the webhooks use. The pending intent is a `platform_payment_requests` row (`provider_reference` → the wallet-facing `/api/billing/solana/tx`, `provider_charge_id` UNIQUE → one signature settles one request).
-
-**Key invariants:**
+**Key invariants that still hold for leftover commerce tables:**
 - Transaction `status`: `pending`, `successful`, `failed`, `archived`, `canceled`, `refunded`
-- **`subscriptions.cancel_at_period_end` is the ONLY signal that a cancel is scheduled** (since `20260726120000`, issue #545). `cancel_at` is nullable and purely informational — the CHECK `subscriptions_cancel_at_requires_schedule` allows it to be non-NULL only while the flag is set, so clear both together (both reactivate actions do). It shipped as `NOT NULL DEFAULT now()` with no writer setting it, which made the Solana crank cancel every subscription at its first rollover. `subscription_status` is `active`/`canceled`/`expired`/`renewed`/`past_due`; `renewed` and `past_due` both count as LIVE (parallel-subscription guards, billing UI, plan change), and cancelling must never *improve* a status
-- **A refund is not all-or-nothing (since #547).** A PARTIAL refund keeps `transactions.status = 'successful'` and records the slice in `refunded_amount` (major units of the row's own currency); only a FULL refund sets `refunded_amount = amount`, flips `status` to `'refunded'` and revokes the entitlement. Every money sum must use `amount - refunded_amount` (`netOfRefunds()` in `lib/payments/payouts-owed.ts`). `NormalizedBillingEvent.amount` is always MAJOR units, converted in each provider's own mapper (Lemon Squeezy reports cents, Binance a USD-pegged stablecoin); an absent amount or a currency mismatch falls back to a full refund
-- **Whether the platform takes a fee is `ProviderCapabilities.bearsPlatformFee`, never `revenue_splits.applies_to_providers`** (retired in #547 — it stored the labels `stripe`/`manual`, not provider slugs, so every PayPal/LS/Binance sale bore 0% on the school's screens while `getPayoutsOwed` applied the full split). The *rate* always comes from the transaction's own `school_percentage_snapshot`, so the school-facing and platform-facing figures reconcile. `transactions` has **no `created_at`** — it is `transaction_date`; querying or merely ordering by the former 42703s the whole request
-- **Access control lives in `entitlements`, not `enrollments`** (since migration `20260516150000`): `entitlements` (`user_id`, `course_id`, `tenant_id`, `source_type`, `source_id`, `status`, `expires_at`) is the polymorphic source of truth for product/subscription access. `enrollments.product_id`/`subscription_id` and their old CHECK constraint were dropped — `enrollments` is now a learning-progress record only (`user_id`, `course_id`, `status`, `tenant_id`, `enrollment_date`)
-- `enroll_user()` RPC loops through ALL courses for a product (a product can map to multiple courses via `product_courses`) and writes to `entitlements`
-- **Subscriptions grant access, not auto-enrollment** — students self-enroll via `/dashboard/student/browse` (`useEnrollment()` hook); `plan_courses` defines which courses a plan covers
-- Transactions have two partial unique indexes (not one): `(user_id, product_id) WHERE plan_id IS NULL AND status IN ('pending','successful')` and `(user_id, plan_id) WHERE product_id IS NULL AND status IN (...)`, plus `transactions_provider_charge_id_unique` for Solana idempotency
-- **`transactions` is server-write-only.** `authenticated` has no INSERT grant (#538) and an UPDATE grant on only `status`, `provider_subscription_id`, `stripe_payment_intent_id` (#528) — every insert uses `createAdminClient()` or a SECURITY DEFINER function. `amount` and the `settlement_*` columns decide what the buyer owes (`settlement_base` is what the on-chain Solana payment is verified against), so they are derived from `products`/`plans` server-side, never taken from the request. A user-scoped insert fails with `permission denied for table transactions` — by design, not a bug to re-grant around
+- `subscriptions.cancel_at_period_end` is the ONLY signal that a cancel is scheduled
+- `enroll_user()` RPC loops through ALL courses for a product via `product_courses` and writes to `entitlements`
+- `transactions` is server-write-only. `authenticated` has no INSERT grant
+- `transactions` has **no `created_at`** — it is `transaction_date`
 
 ### Routing & i18n
 
-All routes live under `app/[locale]/` (`[locale]` is always `/en/` or `/es/`). Public routes (no auth): `/auth/*`, `/`, `/create-school`, `/creators`, `/join-school`, `/platform-pricing`, `/pricing`, `/courses`, `/verify`, `/oauth/consent`. Role routing after login: `/dashboard/student` · `/dashboard/teacher` · `/dashboard/admin`. `/platform/*` is guarded separately by `checkSuperAdmin()` in `proxy.ts`, independent of tenant role.
+All routes live under `app/[locale]/` (`[locale]` is always `/en/` or `/es/`). Public routes (no auth): `/auth/*`, `/join-school`, `/verify`, `/oauth/consent`. Anonymous `/` and retired marketing paths (`/pricing`, `/courses`, `/creators`, `/checkout`, `/platform`, `/platform-pricing`) go to login or the role dashboard. Role routing after login: `/dashboard/student` · `/dashboard/teacher` · `/dashboard/admin`. There is no live `/platform` operator console, so `proxy.ts` does not call `checkSuperAdmin()`.
 
 ### Database Schema Essentials
 
-116 tables. Key groups: multi-tenancy (`tenants`, `tenant_users`, `tenant_settings`, `super_admins`) · users (`profiles` — global, no tenant_id) · content (`courses`, `lessons`, `exercises`, `exams`, `exam_questions`) · progress (`enrollments` — progress only, `lesson_completions`, `exam_submissions`) · commerce (`products`, `plans`, `transactions`, `subscriptions`, `payment_requests`, `entitlements` — course-access source of truth) · revenue (`revenue_splits`, `payouts`, `invoices`) · platform billing (`platform_plans`, `platform_subscriptions`, `platform_payment_requests`) · gamification (10 `gamification_*` tables incl. `gamification_profiles`, `gamification_xp_transactions`, `gamification_achievements`; plus leagues in `league_tiers`/`league_memberships`) · certificates · notifications.
+116 tables. Key groups: multi-tenancy (`tenants`, `tenant_users`, `tenant_settings`, `super_admins`) · users (`profiles` — global, no tenant_id) · content (`courses`, `lessons`, `exercises`, `exams`, `exam_questions`) · progress (`enrollments` — progress only, `lesson_completions`, `exam_submissions`) · access (`entitlements` — course-access source of truth; leftover `products`, `plans`, `transactions`, `subscriptions`, `payment_requests`) · leftover platform billing tables (`platform_plans`, `platform_subscriptions`, `platform_payment_requests`) · gamification · certificates · notifications.
 
 `profiles` and `gamification_levels` are global (no `tenant_id`).
 
 **Key RPCs:**
 ```typescript
 supabase.rpc('enroll_user', { _user_id, _product_id })
-supabase.rpc('handle_new_subscription', { _user_id, _plan_id, _transaction_id, _start_date })  // trigger-invoked; writes to entitlements
+supabase.rpc('self_enroll_school_course', { _course_id }) // membership enroll, no subscription
 supabase.rpc('has_course_access', { _user_id, _course_id })  // access check; _course_id is integer — cast ::int from SQL
 supabase.rpc('award_xp', { _user_id, _action_type, _xp_amount, _reference_id, _reference_type })  // overload adds _tenant_id
 supabase.rpc('create_exam_submission', { p_student_id, p_exam_id, p_answers })
 supabase.rpc('save_exam_feedback', { p_submission_id, p_exam_id, p_student_id, p_answers, p_overall_feedback, p_score, p_question_feedback, p_ai_model, p_processing_time_ms })
-supabase.rpc('get_plan_features', { _tenant_id })
 ```
 
-### Plan Limits & Feature Gating
+`get_plan_features(_tenant_id)` still exists as a leftover RPC. Do not treat it as a live product gate for course create or Browse enroll.
 
-Limits live in `platform_plans.limits` (JSONB): `free` (5 courses/50 students/10% fee) · `starter` (15/200/5%, $9/mo) · `pro` (100/1000/2%, $29/mo) · `business` (unlimited courses/5000 students, 0% fee, $79/mo) · `enterprise` (unlimited/0%, $199/mo). `get_plan_features(_tenant_id)` RPC is the single source of truth. Client hook: `usePlanFeatures()`. Component: `<FeatureGate feature="..." />`.
+### Plan leftovers (not live product)
 
-**Limits are enforced by the database (#658).** `enforce_course_plan_limit` / `enforce_student_plan_limit` triggers refuse any write that would make a `courses` row non-archived or a `tenant_users` row an active student beyond `max_courses` / `max_students`, from any client (server action, MCP, SQL). They raise SQLSTATE `LM001` with message `plan_limit_exceeded:<courses|students>` — map it with `isPlanLimitError()` / `courseLimitMessage()` from `lib/billing/plan-limit-error.ts`, never by matching the message. App-layer pre-checks (`checkCourseLimit()`, `joinCurrentSchool`) stay for the nicer message; the trigger is what wins a race. `-1` or a missing limit means unlimited; `SET app.bypass_plan_limits = 'on'` skips the check for operators/seed only. RLS-scoped callers pre-check through the `get_tenant_plan_usage(_tenant_id)` RPC (members / super admins / service role).
-
-**Features are enforced on the server too (#662).** `lib/plans/server.ts`: `getTenantPlan(tenantId)` (React `cache()`, reads `tenants.plan` → `platform_plans` with NO `is_active` filter), `hasPlanFeature`, `requirePlanFeature` (throws `PlanFeatureError`, map with `planFeatureErrorMessage`), `getAnalyticsTier` (`none|basic|advanced`), `getCertificateTier` (`none|basic|custom`). Closed by default: a missing key is "not included", so any new key MUST be backfilled into every plan's JSON (see `20260901170000_backfill_plan_feature_keys.sql`) before a gate reads it. `FEATURE_REQUIRED_PLAN` in `lib/plans/features.ts` is the pricing promise and `tests/unit/plan-feature-gate-contract.test.ts` fails when a key there has no gate site. Tier meanings live in PRODUCT.md "Plan tiers".
+Course and student caps were dropped. Do not reintroduce `enforce_course_plan_limit`, `LM001`, or Free upgrade screens. `lib/plans/server.ts` still has `hasPlanFeature` / `requirePlanFeature` / `getCertificateTier` for leftover teacher screens. Do not add new dashboard gates or `usePlanFeatures()` / `<FeatureGate>` (those files are deleted).
 
 ## MCP Server
 
@@ -169,15 +146,15 @@ NEXT_PUBLIC_PLATFORM_DOMAIN=       # e.g. lvh.me for local dev, lmsplatform.com 
 
 ## Testing
 
-E2E tests in `tests/playwright/` — 33 spec files (tenant isolation, auth security, payment flows, enrollment, entitlements, gamification, community, i18n, platform panel, plan change, teacher/admin CRUD). Read the directory rather than a list here; it changes often. Highest-priority: `tenant-isolation.spec.ts`, `auth-security.spec.ts`, `payment-flows.spec.ts`, `evaluations-security.spec.ts`.
+E2E tests in `tests/playwright/` — tenant isolation, auth security, enrollment, entitlements, gamification, i18n, teacher/admin CRUD. Read the directory rather than a list here; it changes often. Highest-priority: `tenant-isolation.spec.ts`, `auth-security.spec.ts`, `evaluations-security.spec.ts`.
 
-Plan-gate specs (`plan-limit-surfaces`, `access-cutoff-lifecycle`, `plan-feature-tiers`, `platform-billing-stripe-webhook`) each own a dedicated tenant and a hidden `platform_plans` row with tiny limits (`tests/playwright/utils/plan-gate-fixtures.ts`) — every enforcement path reads the plan by slug with no `is_active` filter, so "at the cap" costs one row, not fifty users. Never move the seeded tenants off their plan.
+Plan-gate E2E helpers are gone. Seeded tenants keep leftover `platform_plans` slugs. Do not recreate Free course caps in specs.
 
 The Playwright config boots its own `webServer` (`next dev` locally on the `BASE_URL` port, reusing a server already listening; `next start` in CI). Use `lvh.me` (never `localhost`), and keep `--workers=1` locally or GoTrue rate-limits the sign-ins. Every spec lives in `tests/playwright/` — the only `testDir` — and every skip carries a reason (permanent ones link an issue); see `tests/README.md`. Unit tests: `npm run test:unit` (Vitest, `tests/unit/`).
 
 Test accounts (from `supabase/seed.sql`, seeded by `supabase db reset`):
 - `student@e2etest.com` / `password123` — student (Default School)
-- `owner@e2etest.com` / `password123` — admin (Default School) **+ super admin** (`/platform/*`)
+- `owner@e2etest.com` / `password123` — admin (Default School)
 - `creator@codeacademy.com` / `password123` — **admin** (Code Academy, subdomain `code-academy.lvh.me:3000`)
 - `alice@student.com` / `password123` — student (Code Academy)
 
@@ -218,12 +195,12 @@ Pre-commit checklist: `npm run build` · tenant filter on every query · tested 
 - `docs/DATABASE_SCHEMA.md` — complete schema with relationships
 - `docs/AUTH.md` — auth flows
 - `docs/AI_AGENT_GUIDE.md` — detailed patterns
-- `docs/MONETIZATION.md` — school billing, feature gating, LATAM payments, revenue dashboard
-- `docs/COMMUNITY_SPACES.md` — community feed, comments, reactions, polls, moderation, security
+- `docs/MONETIZATION.md` — leftover billing tables and why the storefront is gone
+- `docs/COMMUNITY_SPACES.md` — community is deleted; lesson comments remain
 
 ## Design Context
 
-**Canonical source: [`PRODUCT.md`](PRODUCT.md) (strategy) + [`DESIGN.md`](DESIGN.md) (visual system).** Read PRODUCT.md before any UI work — it carries the register (`product`, with `(public)/*` and Puck blocks in `brand`), the four user groups, the anti-references, and the five design principles. The summary below is a pointer, not the authority.
+**Canonical source: [`PRODUCT.md`](PRODUCT.md) (strategy) + [`DESIGN.md`](DESIGN.md) (visual system).** Read PRODUCT.md before any UI work — it carries the register, the user groups, the anti-references, and the five design principles. The summary below is a pointer, not the authority.
 
 Users span independent creators/solo educators and multi-staff schools, across LATAM and English-speaking markets (en/es). Brand personality: **minimal, elegant, focused** — content over chrome, no visual noise.
 
