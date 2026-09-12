@@ -51,8 +51,9 @@ export async function Navbar({ headerSettings }: NavbarProps = {}) {
             .eq('user_id', userId)
             .eq('status', 'active');
         userTenants = (data ?? []).flatMap((tu) => {
-            const nested = tu.tenant
-            if (!nested || Array.isArray(nested)) return []
+            const raw = tu.tenant
+            const nested = Array.isArray(raw) ? raw[0] : raw
+            if (!nested) return []
             return [{ id: nested.id, slug: nested.slug, name: nested.name, role: tu.role }]
         })
     }
