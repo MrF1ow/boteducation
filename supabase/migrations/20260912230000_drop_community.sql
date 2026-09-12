@@ -21,6 +21,3 @@ DROP POLICY IF EXISTS "Upload community assets" ON storage.objects;
 DROP POLICY IF EXISTS "Upload community assets to own folder" ON storage.objects;
 DROP POLICY IF EXISTS "Users can delete own community assets" ON storage.objects;
 DROP POLICY IF EXISTS "Delete own community assets" ON storage.objects;
-
-DELETE FROM storage.objects WHERE bucket_id = 'community-assets';
-DELETE FROM storage.buckets WHERE id = 'community-assets';
