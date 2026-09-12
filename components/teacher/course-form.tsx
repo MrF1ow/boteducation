@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { createCourse, updateCourse, checkCourseLimit } from '@/app/actions/teacher/courses'
+import { createCourse, updateCourse } from '@/app/actions/teacher/courses'
 import { uploadCourseImage } from '@/app/actions/teacher/course-images'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,8 +17,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { IconLoader2, IconArrowLeft, IconAlertTriangle, IconUpload, IconX } from '@tabler/icons-react'
+import { IconLoader2, IconArrowLeft, IconUpload, IconX } from '@tabler/icons-react'
 import Link from 'next/link'
 
 interface Category {
@@ -47,12 +46,6 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [limitInfo, setLimitInfo] = useState<{
-    canCreate: boolean
-    currentCount: number
-    limit: number
-    plan: string
-  } | null>(null)
 
   const [formData, setFormData] = useState({
     title: initialData?.title || '',
@@ -63,13 +56,6 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
     learning_objectives: (initialData?.learning_objectives ?? []).join('\n'),
     estimated_duration_minutes: initialData?.estimated_duration_minutes?.toString() || '',
   })
-
-  // Check course limit on mount for new courses
-  useEffect(() => {
-    if (!initialData) {
-      checkCourseLimit().then(setLimitInfo)
-    }
-  }, [initialData])
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -131,39 +117,6 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
     }
   }
 
-  // Show limit reached error for new courses
-  if (!initialData && limitInfo && !limitInfo.canCreate) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('details')}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <Alert variant="destructive">
-            <IconAlertTriangle className="h-4 w-4" />
-            <AlertTitle>{t('limitReached')}</AlertTitle>
-            <AlertDescription>
-              {t('limitReachedDesc', { plan: limitInfo.plan, limit: limitInfo.limit, current: limitInfo.currentCount })}
-            </AlertDescription>
-          </Alert>
-          <div className="flex gap-3">
-            <Link href="/dashboard/teacher" className="flex-1">
-              <Button type="button" variant="outline" className="w-full">
-                <IconArrowLeft className="mr-2 h-4 w-4" />
-                {t('actions.cancel')}
-              </Button>
-            </Link>
-            <Link href="/pricing" className="flex-1">
-              <Button className="w-full">
-                {t('upgradePlan')}
-              </Button>
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
-    )
-  }
-
   return (
     <form onSubmit={handleSubmit}>
       <Card>
@@ -171,17 +124,6 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
           <CardTitle>{t('details')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Show warning if approaching limit */}
-          {!initialData && limitInfo && limitInfo.canCreate && limitInfo.currentCount / limitInfo.limit > 0.8 && (
-            <Alert>
-              <IconAlertTriangle className="h-4 w-4" />
-              <AlertTitle>{t('approachingLimit')}</AlertTitle>
-              <AlertDescription>
-                {t('approachingLimitDesc', { current: limitInfo.currentCount, limit: limitInfo.limit, plan: limitInfo.plan })}
-              </AlertDescription>
-            </Alert>
-          )}
-
           {error && (
             <div className="rounded-lg border border-destructive bg-destructive/10 p-4">
               <p className="text-sm text-destructive">{error}</p>

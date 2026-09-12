@@ -8,22 +8,26 @@ import { updateSettings } from '@/app/actions/admin/settings'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
-import { UpgradeNudge } from '@/components/shared/upgrade-nudge'
+import type { SettingsGroup } from '@/app/actions/admin/settings'
 
 interface BrandingSettingsFormProps {
-  /** Colours are `custom_branding` (Business+, #662); logo/favicon stay open. */
-  colorsLocked?: boolean
-  settings: Record<string, any>
+  settings: SettingsGroup
 }
 
-export default function BrandingSettingsForm({ settings, colorsLocked = false }: BrandingSettingsFormProps) {
+function settingText(settings: SettingsGroup, key: string, fallback = ''): string {
+  const raw = settings[key]?.value?.value
+  if (raw == null || raw === '') return fallback
+  return String(raw)
+}
+
+export default function BrandingSettingsForm({ settings }: BrandingSettingsFormProps) {
   const t = useTranslations('dashboard.admin.settings.form')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const logoUrl = settings.logo_url?.value?.value || ''
-  const faviconUrl = settings.favicon_url?.value?.value || ''
-  const primaryColor = settings.primary_color?.value?.value || '#2563eb'
-  const secondaryColor = settings.secondary_color?.value?.value || '#7c3aed'
+  const logoUrl = settingText(settings, 'logo_url')
+  const faviconUrl = settingText(settings, 'favicon_url')
+  const primaryColor = settingText(settings, 'primary_color', '#2563eb')
+  const secondaryColor = settingText(settings, 'secondary_color', '#7c3aed')
 
   const [previewPrimary, setPreviewPrimary] = useState(primaryColor)
   const [previewSecondary, setPreviewSecondary] = useState(secondaryColor)
@@ -36,13 +40,8 @@ export default function BrandingSettingsForm({ settings, colorsLocked = false }:
       const updatedSettings = {
         logo_url: { value: formData.get('logo_url') as string },
         favicon_url: { value: formData.get('favicon_url') as string },
-        // Colour keys are refused server-side below Business; don't send them.
-        ...(colorsLocked
-          ? {}
-          : {
-              primary_color: { value: formData.get('primary_color') as string },
-              secondary_color: { value: formData.get('secondary_color') as string },
-            }),
+        primary_color: { value: formData.get('primary_color') as string },
+        secondary_color: { value: formData.get('secondary_color') as string },
       }
 
       const result = await updateSettings(updatedSettings)
@@ -90,10 +89,6 @@ export default function BrandingSettingsForm({ settings, colorsLocked = false }:
         </p>
       </div>
 
-      {colorsLocked ? (
-        <UpgradeNudge feature="custom_branding" hint="brandingLocked" compact />
-      ) : (
-        <>
       {/* Colors */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Primary Color */}
@@ -162,9 +157,6 @@ export default function BrandingSettingsForm({ settings, colorsLocked = false }:
           </p>
         </div>
       </div>
-
-        </>
-      )}
 
       {/* Preview */}
       <div className="space-y-3">

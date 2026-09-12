@@ -22,6 +22,10 @@ const ENFORCED_ELSEWHERE: Record<string, string> = {
   priority_support: 'not a product capability — support SLA',
   voice_exercises: 'no voice surface ships yet; gate at build time (tracked in #662)',
   white_label: 'no white-label surface ships yet; gate at build time (tracked in #662)',
+  custom_branding: 'self-hosted leftover cleanup PR-01 — branding always applies',
+  custom_domain: 'self-hosted leftover cleanup PR-01 — Cloudflare DNS errors only',
+  ai_grading: 'self-hosted leftover cleanup PR-01 — grading is always allowed',
+  analytics: 'self-hosted leftover cleanup PR-01 — analytics pages always render',
 }
 
 const TIER_HELPERS: Record<string, string[]> = {

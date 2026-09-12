@@ -37,21 +37,18 @@ test.describe('Plan feature gates (#662)', () => {
     expect(bySlug.pro.remove_branding).toBe(true)
   })
 
-  test('Free tenant: analytics, branding and certificate design are nudged', async ({ page }) => {
+  test('Free tenant: analytics and branding are unlocked; certificate design stays gated', async ({ page }) => {
     test.setTimeout(120_000)
     await loginAsTeacher(page, BASE) // owner@e2etest.com — Default School admin
 
     await page.goto(`${BASE}/${LOCALE}/dashboard/admin/analytics`)
-    await expect(page.getByTestId('upgrade-nudge')).toBeVisible()
-    await expect(page.getByTestId('upgrade-nudge')).toHaveAttribute('data-feature', 'analytics')
+    await expect(page.getByTestId('upgrade-nudge')).toHaveCount(0)
+    await expect(page.getByRole('heading', { name: /analytics/i })).toBeVisible()
 
     await page.goto(`${BASE}/${LOCALE}/dashboard/admin/appearance`)
-    const brandingNudges = page.getByTestId('upgrade-nudge').filter({ has: page.locator('[data-feature="custom_branding"]') })
-    await expect(page.locator('[data-testid="upgrade-nudge"][data-feature="custom_branding"]').first()).toBeVisible()
-    // Colour inputs are gone; logo stays editable on every plan.
-    await expect(page.locator('#primary_color')).toHaveCount(0)
+    await expect(page.locator('[data-testid="upgrade-nudge"][data-feature="custom_branding"]')).toHaveCount(0)
+    await expect(page.locator('#primary_color')).toBeVisible()
     await expect(page.locator('#logo_url')).toBeVisible()
-    void brandingNudges
 
     const { data: course } = await admin
       .from('courses')

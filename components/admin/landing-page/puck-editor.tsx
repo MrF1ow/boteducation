@@ -19,6 +19,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import BrandingSettingsForm from '@/components/admin/branding-settings-form'
+import type { SettingsGroup } from '@/app/actions/admin/settings'
 import { AiChatPanel } from '@/components/admin/landing-page/ai-chat-panel'
 import { IconArrowLeft, IconDeviceFloppy, IconPalette } from '@tabler/icons-react'
 import { useTranslations } from 'next-intl'
@@ -28,7 +29,7 @@ interface Props {
   pageName: string
   pageStatus: 'draft' | 'published'
   initialData: Data
-  brandingSettings: Record<string, unknown>
+  brandingSettings: SettingsGroup
   landingData: LandingData
   /** The AI assistant is a paid feature — /api/landing/generate rejects free-plan tenants */
   aiEnabled?: boolean

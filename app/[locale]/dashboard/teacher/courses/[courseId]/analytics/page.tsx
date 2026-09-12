@@ -16,8 +16,6 @@ import {
 } from '@tabler/icons-react'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getConfusionHotspots, type Hotspot } from '@/lib/analytics/confusion-hotspots'
-import { getAnalyticsTier, getTenantPlan } from '@/lib/plans/server'
-import { UpgradeNudge } from '@/components/shared/upgrade-nudge'
 import { HotspotScopeBadge, SeverityBar, DifficultyDelta } from '@/components/teacher/analytics-cells'
 
 interface PageProps {
@@ -121,19 +119,6 @@ export default async function CourseAnalyticsPage({ params, searchParams }: Page
     )
   }
 
-  // Per-course confusion hotspots are Advanced analytics (Pro+, #662).
-  if ((await getAnalyticsTier(tenantId)) !== 'advanced') {
-    return (
-      <div className="p-8" data-testid="teacher-analytics-page">
-        <UpgradeNudge
-          feature="analytics"
-          hint="analyticsBasic"
-          currentPlan={(await getTenantPlan(tenantId)).slug}
-        />
-      </div>
-    )
-  }
-
   const result = await getConfusionHotspots(supabase, {
     courseId: courseIdNum,
     tenantId,
@@ -149,7 +134,7 @@ export default async function CourseAnalyticsPage({ params, searchParams }: Page
     sources.examSubmissions
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-20" data-testid="teacher-analytics-page">
       <header className="sticky top-0 z-10 border-b bg-card">
         <div className="container mx-auto px-4 py-5 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

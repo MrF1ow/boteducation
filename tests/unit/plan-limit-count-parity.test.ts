@@ -48,7 +48,6 @@ vi.mock('@/lib/billing/access-cutoff', () => ({
 }))
 
 import { getSubscriptionStatus } from '@/app/actions/admin/billing'
-import { checkCourseLimit } from '@/app/actions/teacher/courses'
 import { checkPlanLimits } from '@/lib/billing/plan-limits'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
@@ -117,53 +116,27 @@ beforeEach(() => {
 })
 
 describe('#546 §5 — one course count everywhere', () => {
-  it('agrees across the billing page, the pre-flight and creation enforcement', async () => {
+  it('agrees across the billing page and the downgrade pre-flight', async () => {
     const shown = await getSubscriptionStatus()
-    const enforcement = await checkCourseLimit()
     const preflight = await checkPlanLimits(asClient(), TENANT, { slug: 'starter' })
 
     expect(shown.usage.courses.current).toBe(10)
-    expect(enforcement.currentCount).toBe(10)
     expect(preflight.usage.courses).toBe(10)
-    expect(new Set([shown.usage.courses.current, enforcement.currentCount, preflight.usage.courses]).size).toBe(1)
   })
 
-  it('lets a school create courses on the plan a downgrade pre-flight approved', async () => {
-    // Approved: 10 active ≤ Starter's 15. Enforcement used to see 30 ≥ 15 and
-    // refuse, with an error telling the school to archive courses it had
-    // already archived.
+  it('approves a downgrade when active courses fit the target plan', async () => {
     const preflight = await checkPlanLimits(asClient(), TENANT, { slug: 'starter' })
     expect(preflight.ok).toBe(true)
-
-    db.tenants[0].plan = 'starter'
-    const enforcement = await checkCourseLimit()
-
-    expect(enforcement.plan).toBe('starter')
-    expect(enforcement.limit).toBe(15)
-    expect(enforcement.canCreate).toBe(true)
   })
 
-  it('still blocks creation when the ACTIVE count is at the limit', async () => {
+  it('reads the limit from platform_plans instead of a fallback map', async () => {
     db.tenants[0].plan = 'starter'
-    seedCourses(15, 4)
-
-    const enforcement = await checkCourseLimit()
-
-    expect(enforcement.currentCount).toBe(15)
-    expect(enforcement.canCreate).toBe(false)
-  })
-
-  it('reads the limit from platform_plans instead of the deleted fallback map', async () => {
-    db.tenants[0].plan = 'starter'
-    // The hardcoded map said starter = 15 no matter what the row said; the
-    // table is now the only source of truth.
     ;(db.platform_plans[1] as { limits: { max_courses: number } }).limits = { max_courses: 3 }
     seedCourses(4, 0)
 
-    const enforcement = await checkCourseLimit()
-
-    expect(enforcement.limit).toBe(3)
-    expect(enforcement.canCreate).toBe(false)
+    const preflight = await checkPlanLimits(asClient(), TENANT, { slug: 'starter' })
+    expect(preflight.ok).toBe(false)
+    expect(preflight.usage.courses).toBe(4)
   })
 
   it('treats -1 as unlimited', async () => {
@@ -171,9 +144,7 @@ describe('#546 §5 — one course count everywhere', () => {
     ;(db.platform_plans[1] as { limits: { max_courses: number } }).limits = { max_courses: -1 }
     seedCourses(500, 0)
 
-    const enforcement = await checkCourseLimit()
-
-    expect(enforcement.limit).toBe(-1)
-    expect(enforcement.canCreate).toBe(true)
+    const preflight = await checkPlanLimits(asClient(), TENANT, { slug: 'starter' })
+    expect(preflight.ok).toBe(true)
   })
 })

@@ -54,9 +54,9 @@ describe('commerce nav disable', () => {
     expect(payoutsPage).toContain("@/components/commerce-gone-page")
   })
 
-  it('does not send cutoff banner CTAs at the deleted billing page', () => {
+  it('does not render cutoff as a live lock', () => {
     const banner = readFileSync('components/shared/access-cutoff-banner.tsx', 'utf8')
     expect(banner).not.toContain('/dashboard/admin/billing')
-    expect(banner).toContain('/dashboard/admin/settings')
+    expect(banner).toContain('return null')
   })
 })

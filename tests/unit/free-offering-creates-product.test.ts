@@ -31,10 +31,6 @@ vi.mock('@/lib/supabase/tenant', () => ({
 
 vi.mock('@/lib/supabase/get-user-role', () => ({ isSuperAdmin: vi.fn().mockResolvedValue(false) }))
 
-vi.mock('@/app/actions/teacher/courses', () => ({
-  checkCourseLimit: vi.fn().mockResolvedValue({ canCreate: true, plan: 'pro', limit: 100, currentCount: 1 }),
-}))
-
 // A live provider client would demand env credentials; free never needs one.
 vi.mock('@/lib/payments', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/payments')>()

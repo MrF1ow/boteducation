@@ -383,15 +383,9 @@ async function checkAiAllowance(
   const { data: plan } = await adminClient.rpc('get_plan_features', {
     _tenant_id: args.tenantId,
   })
-  const features = (plan?.features ?? {}) as Record<string, unknown>
   const limits = (plan?.limits ?? {}) as Record<string, unknown>
-  if (features.ai_grading !== true) return { allowed: false, reason: 'plan_excluded' }
-
   const tenantMonthly = numberLimit(limits.checkpoint_ai_evals_per_month)
   const studentMonthly = numberLimit(limits.checkpoint_ai_evals_per_student_month)
-  if (tenantMonthly === 0 || studentMonthly === 0) {
-    return { allowed: false, reason: 'plan_excluded' }
-  }
 
   const since = monthStartIso()
   const [checkpointCount, studentCount, tenantCount] = await Promise.all([
@@ -424,7 +418,8 @@ async function checkAiAllowance(
 }
 
 function numberLimit(value: unknown): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : 0
+  if (typeof value === 'number' && Number.isFinite(value) && value > 0) return value
+  return -1
 }
 
 async function countAiAttempts(

@@ -35,7 +35,7 @@ export async function requireCourseAccess(
   const state = await resolveCourseAccessState(supabase, userId, courseId)
   if (state === 'granted') return
 
-  redirect(state === 'suspended' ? '/dashboard/student/access-suspended' : '/dashboard/student')
+  redirect('/dashboard/student')
 }
 
 /**

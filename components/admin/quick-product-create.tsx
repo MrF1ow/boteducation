@@ -4,9 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
-import { IconAlertTriangle } from '@tabler/icons-react'
 import { saveProductCreationWizard } from '@/app/actions/admin/products'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -26,17 +24,7 @@ import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import type { SaveIntent } from '@/lib/admin/product-creation/types'
 
-export interface CourseLimitInfo {
-  canCreate: boolean
-  currentCount: number
-  limit: number
-  plan: string
-  approaching?: boolean
-  nextPlan?: string
-}
-
 interface QuickProductCreateProps {
-  limitInfo: CourseLimitInfo
   className?: string
 }
 
@@ -45,7 +33,7 @@ interface QuickProductCreateProps {
  * Everything else (category, thumbnail, after-purchase steps, provider choice)
  * is deferred with defaults — the full wizard stays at /dashboard/admin/products/new.
  */
-export function QuickProductCreate({ limitInfo, className }: QuickProductCreateProps) {
+export function QuickProductCreate({ className }: QuickProductCreateProps) {
   const t = useTranslations('dashboard.admin.products.new.quick')
   const router = useRouter()
   const [title, setTitle] = useState('')
@@ -88,34 +76,8 @@ export function QuickProductCreate({ limitInfo, className }: QuickProductCreateP
     }
   }
 
-  const atLimit = !limitInfo.canCreate
-
   return (
     <div className={cn('mx-auto w-full max-w-xl space-y-4', className)}>
-      {atLimit ? (
-        <Alert variant="destructive">
-          <IconAlertTriangle className="size-4" />
-          <AlertTitle>{t('limitReachedTitle')}</AlertTitle>
-          <AlertDescription>
-            {t('limitReachedDescription', {
-              count: limitInfo.currentCount,
-              limit: limitInfo.limit,
-              plan: limitInfo.plan,
-            })}
-          </AlertDescription>
-        </Alert>
-      ) : limitInfo.approaching ? (
-        <Alert>
-          <IconAlertTriangle className="size-4" />
-          <AlertDescription>
-            {t('limitApproaching', {
-              count: limitInfo.currentCount,
-              limit: limitInfo.limit,
-            })}
-          </AlertDescription>
-        </Alert>
-      ) : null}
-
       <Card>
         <CardHeader>
           <CardTitle>{t('title')}</CardTitle>
@@ -131,7 +93,6 @@ export function QuickProductCreate({ limitInfo, className }: QuickProductCreateP
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder={t('courseTitlePlaceholder')}
-                  disabled={atLimit}
                   maxLength={200}
                 />
               </FieldContent>
@@ -143,14 +104,14 @@ export function QuickProductCreate({ limitInfo, className }: QuickProductCreateP
             <Button
               className="flex-1"
               onClick={() => handleSave('publish')}
-              disabled={atLimit || !canPublish || saving !== null}
+              disabled={!canPublish || saving !== null}
             >
               {saving === 'publish' ? t('publishing') : t('publish')}
             </Button>
             <Button
               variant="outline"
               onClick={() => handleSave('draft')}
-              disabled={atLimit || title.trim().length === 0 || saving !== null}
+              disabled={title.trim().length === 0 || saving !== null}
             >
               {saving === 'draft' ? t('savingDraft') : t('saveDraft')}
             </Button>

@@ -9,8 +9,6 @@ import { isMailerConfigured } from '@/lib/email/status'
 import { courseRemovedTemplate } from '@/lib/email/templates/course-removed'
 import { getLocale } from 'next-intl/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { countTenantUsage, getTenantPlanLimits } from '@/lib/billing/plan-limits'
-import { courseLimitMessage, isPlanLimitError } from '@/lib/billing/plan-limit-error'
 import { reconcileAccessCutoffSafely } from '@/lib/billing/access-cutoff'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track, safeAnalytics } from '@/lib/analytics/server'
@@ -48,68 +46,7 @@ function sanitizeDuration(minutes: number | null | undefined): number | null {
 }
 
 /**
- * Check if tenant has reached their course creation limit
- */
-export async function checkCourseLimit(): Promise<{
-  canCreate: boolean
-  currentCount: number
-  limit: number
-  plan: string
-  approaching?: boolean
-  nextPlan?: string
-  nextPlanPrice?: number
-}> {
-  const tenantId = await getCurrentTenantId()
-
-  // Issue #546 §5: creation enforcement used to count ALL courses (archived
-  // included) against a limit resolved through a hardcoded fallback map, while
-  // the downgrade pre-flight, the access-cutoff reconciler and the number shown
-  // on the billing page all counted non-archived courses from
-  // `platform_plans.limits`. A school could be approved for a downgrade and
-  // then be unable to create a single course on the plan it just moved to,
-  // with an error telling it to archive courses that provably did not help.
-  //
-  // Both the count and the limit now come from lib/billing/plan-limits, on the
-  // service-role client so the number does not depend on what the calling
-  // teacher can see through RLS.
-  const adminClient = createAdminClient()
-  const [{ planSlug: plan, limits }, usage] = await Promise.all([
-    getTenantPlanLimits(adminClient, tenantId),
-    countTenantUsage(adminClient, tenantId),
-  ])
-
-  const limit = limits?.max_courses ?? -1
-  const currentCount = usage.courses
-  // -1 means unlimited
-  const canCreate = limit === -1 || currentCount < limit
-  const approaching = limit !== -1 && currentCount >= limit * 0.8
-
-  // Get next plan info when approaching limit
-  let nextPlan: string | undefined
-  let nextPlanPrice: number | undefined
-  if (approaching) {
-    const planOrder = ['free', 'starter', 'pro', 'business', 'enterprise']
-    const currentIndex = planOrder.indexOf(plan)
-    if (currentIndex >= 0 && currentIndex < planOrder.length - 1) {
-      nextPlan = planOrder[currentIndex + 1]
-      const prices: Record<string, number> = { starter: 9, pro: 29, business: 79, enterprise: 199 }
-      nextPlanPrice = prices[nextPlan]
-    }
-  }
-
-  return {
-    canCreate,
-    currentCount,
-    limit,
-    plan,
-    approaching,
-    nextPlan,
-    nextPlanPrice,
-  }
-}
-
-/**
- * Create a new course with plan limit validation
+ * Create a new course
  */
 export async function createCourse(courseData: CourseFormData) {
   const supabase = await createClient()
@@ -123,12 +60,6 @@ export async function createCourse(courseData: CourseFormData) {
 
   if (role !== 'teacher' && role !== 'admin') {
     throw new Error('Unauthorized: Only teachers and admins can create courses')
-  }
-
-  // Check plan limits
-  const limitCheck = await checkCourseLimit()
-  if (!limitCheck.canCreate) {
-    throw new Error(courseLimitMessage(limitCheck))
   }
 
   // Use admin client for insert — auth and role are already validated above.
@@ -163,27 +94,12 @@ export async function createCourse(courseData: CourseFormData) {
     .single()
 
   if (error) {
-    // The `enforce_course_plan_limit` trigger (#658) is the authoritative check;
-    // the pre-check above can lose a race to a concurrent insert or an MCP
-    // write, and this is the message it would have shown.
-    if (isPlanLimitError(error)) {
-      throw new Error(courseLimitMessage(await checkCourseLimit()))
-    }
     console.error('Failed to create course:', error)
     throw new Error(`Failed to create course: ${error.message}`)
   }
 
-  // The course row now exists, so the tenant's course count has changed —
-  // reconcile the access cutoff at the moment usage moves rather than waiting up
-  // to 24h for the nightly sweep (issue #513). `checkCourseLimit` above blocks at
-  // `currentCount < limit` and counts *all* courses, while
-  // `computePlanLimitViolations` flags at `>` and counts only non-archived ones,
-  // so a legitimate creation normally produces no violation; this call exists to
-  // catch the cases where those two independent limit computations drift, and to
-  // clear a stale cutoff once a tenant drops back under its limit.
-  // Non-blocking, via the shared wrapper: reconciliation must never fail a course
-  // that was already created, and `archiveCourse`/`deleteCourse` below reconcile
-  // the same way.
+  // Usage-change follow-up. The reconciler is a no-op after leftover cleanup
+  // PR-01; keep the call so archive/delete paths stay in one pattern.
   await reconcileAccessCutoffSafely(adminClient, tenantId)
 
   await track(

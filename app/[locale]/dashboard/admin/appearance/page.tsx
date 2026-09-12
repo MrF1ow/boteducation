@@ -1,7 +1,4 @@
 import { getUserRole } from '@/lib/supabase/get-user-role'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
-import { hasPlanFeature } from '@/lib/plans/server'
-import { UpgradeNudge } from '@/components/shared/upgrade-nudge'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
@@ -25,9 +22,6 @@ export default async function AppearancePage() {
   const activePreset = await getActivePreset()
   const settingsResult = await getAllSettingsByCategory()
   const settings = settingsResult.success ? settingsResult.data : null
-  // Theme presets and colours are `custom_branding` (Business+, #662); the
-  // actions refuse below that, so the controls show the nudge instead.
-  const customBranding = await hasPlanFeature(await getCurrentTenantId(), 'custom_branding')
 
   return (
     <div className="min-h-screen bg-background">
@@ -66,11 +60,7 @@ export default async function AppearancePage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {customBranding ? (
-                  <ThemePresetSelector activePreset={activePreset} />
-                ) : (
-                  <UpgradeNudge feature="custom_branding" hint="brandingLocked" compact />
-                )}
+                <ThemePresetSelector activePreset={activePreset} />
               </CardContent>
             </Card>
 
@@ -83,7 +73,7 @@ export default async function AppearancePage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <BrandingSettingsForm settings={settings.general || {}} colorsLocked={!customBranding} />
+                  <BrandingSettingsForm settings={settings.general || {}} />
                 </CardContent>
               </Card>
             )}

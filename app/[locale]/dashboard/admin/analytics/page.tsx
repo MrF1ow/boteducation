@@ -9,8 +9,6 @@ import { ExportButton } from '@/components/admin/export-button'
 import Link from 'next/link'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { getTranslations } from 'next-intl/server'
-import { getAnalyticsTier, getTenantPlan } from '@/lib/plans/server'
-import { UpgradeNudge } from '@/components/shared/upgrade-nudge'
 import { format } from 'date-fns'
 import { es, enUS } from 'date-fns/locale'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
@@ -65,24 +63,6 @@ export default async function AnalyticsPage({
   }
 
   const tenantId = await getCurrentTenantId()
-
-  // Analytics tiers (#662): none on Free → nudge; basic+ shows growth,
-  // engagement and course popularity. Revenue charts are gone with commerce.
-  const analyticsTier = await getAnalyticsTier(tenantId)
-  if (analyticsTier === 'none') {
-    return (
-      <div className="mx-auto max-w-7xl space-y-6 p-6" data-testid="admin-analytics-page">
-        <AdminBreadcrumb
-          items={[
-            { label: tBreadcrumbs('admin'), href: '/dashboard/admin' },
-            { label: tBreadcrumbs('analytics') },
-          ]}
-        />
-        <UpgradeNudge feature="analytics" currentPlan={(await getTenantPlan(tenantId)).slug} />
-      </div>
-    )
-  }
-  const advancedAnalytics = analyticsTier === 'advanced'
 
   // Get period from query params (default: 30 days)
   const period = resolvedSearchParams.period || '30'
@@ -270,21 +250,19 @@ export default async function AnalyticsPage({
           <p className="mt-0.5 text-sm text-muted-foreground">{t('description')}</p>
         </div>
         <div className="flex items-center gap-2">
-          {advancedAnalytics && (
-            <ExportButton
-              data={{
-                userGrowthData,
-                coursePopularityData,
-                metrics: {
-                  totalUsers: totalUsers || 0,
-                  totalEnrollments: totalEnrollments || 0,
-                  activeStudents,
-                  averageCompletionRate,
-                },
-              }}
-              period={period}
-            />
-          )}
+          <ExportButton
+            data={{
+              userGrowthData,
+              coursePopularityData,
+              metrics: {
+                totalUsers: totalUsers || 0,
+                totalEnrollments: totalEnrollments || 0,
+                activeStudents,
+                averageCompletionRate,
+              },
+            }}
+            period={period}
+          />
           <div className="flex gap-1">
             {(['7', '30', '90', '365'] as const).map((p) => (
               <Link key={p} href={`?period=${p}`}>

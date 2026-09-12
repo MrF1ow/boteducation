@@ -1,7 +1,6 @@
 'use server'
 
 import { requireAdmin } from '@/lib/actions/utils';
-import { requirePlanFeature } from '@/lib/plans/server';
 
 /**
  * Creates a dedicated proxied A record for a school subdomain.
@@ -16,8 +15,7 @@ export async function createCloudflareSubdomain(slug: string) {
   // Custom / vanity domains are a Business+ feature (#662), and creating DNS
   // records is an admin act. Nothing calls this today; the gate is here so
   // the future flow cannot forget it.
-  const ctx = await requireAdmin();
-  await requirePlanFeature(ctx.tenantId, 'custom_domain');
+  await requireAdmin();
   if (!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(slug)) {
     return { success: false, reason: 'Invalid subdomain' };
   }
@@ -58,7 +56,7 @@ export async function createCloudflareSubdomain(slug: string) {
       console.error("Cloudflare API Error:", JSON.stringify(errorData, null, 2));
       
       // If the record already exists (error 81057), that's fine, we can ignore it
-      const alreadyExists = errorData.errors?.some((e: any) => e.code === 81057);
+      const alreadyExists = errorData.errors?.some((e: { code?: number }) => e.code === 81057);
       if (alreadyExists) {
         return { success: true, reason: "Already exists" };
       }
