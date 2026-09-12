@@ -284,6 +284,13 @@ async function domClick(page: Page, testIdOrLocator: string | ReturnType<Page['l
   await loc.first().evaluate((el) => (el as HTMLElement).click())
 }
 
+/** Dev overlay can cover the whole page in this environment. Remove it. */
+async function dismissNextjsOverlay(page: Page) {
+  await page.evaluate(() => {
+    document.querySelectorAll('nextjs-portal, [data-nextjs-dialog-overlay]').forEach((el) => el.remove())
+  })
+}
+
 async function completeCurrentLesson(page: Page) {
   const toggle = page.getByTestId('lesson-complete-toggle')
   // On the production build the app router briefly keeps the outgoing lesson
@@ -297,6 +304,7 @@ async function completeCurrentLesson(page: Page) {
 }
 
 async function logoutViaMenu(page: Page) {
+  await dismissNextjsOverlay(page)
   await domClick(page, 'user-nav-trigger')
   await domClick(page, 'user-nav-logout')
   await page.waitForURL(/\/auth\/login/, { timeout: 30_000 })
@@ -517,6 +525,7 @@ test.describe('Loop 2 — join school → learn → verifiable certificate', () 
       // Dev overlay (`Cannot write to a CLOSED writable stream`) can replace
       // the result tree with the student error boundary. Reload once.
       await page.reload({ waitUntil: 'domcontentloaded' })
+      await dismissNextjsOverlay(page)
       await expect(page.getByText('100%', { exact: false }).first()).toBeVisible({ timeout: 60_000 })
     })
 
@@ -648,7 +657,7 @@ test.describe('Loop 2 — join school → learn → verifiable certificate', () 
       await fillSettled(page, 'update-password-password', STUDENT.newPassword)
       await domClick(page, 'update-password-submit')
       await page.waitForURL(/\/dashboard\//, { timeout: 60_000 })
-
+      await dismissNextjsOverlay(page)
       await logoutViaMenu(page)
 
       await fillSettled(page, 'login-email', STUDENT.email)
