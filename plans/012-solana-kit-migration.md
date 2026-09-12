@@ -19,6 +19,7 @@
 - **Category**: dependencies / migration / security
 - **Planned at**: commit `7fd6ae16` (branch `feat/payments-lemonsqueezy-solana`), 2026-06-16
 - **Supersedes**: the deferred H2 on-chain residual from the #334 security review (partial-leg resume wiring + charge-from-on-chain-terms) — Phase 5 here is its home.
+- **Accepted residual (2026-09-12)**: Root `npm audit` after the non-Solana cleanup is **6 vulns (4 high, 2 moderate, 0 critical)**. All six are the legacy web3.js / `@solana/pay` / `@solana/spl-token` / `bigint-buffer` / `jayson` / `stream-json` chain. There is still no patched `bigint-buffer`. `npm audit fix --force` wants `web3.js@0.0.3` and `spl-token@0.1.8`. That is forbidden. This run did not start Phase 1–4 because payment verify/build must not half-migrate, kit must stay on 6.x, and the devnet harness for Phases 2, 4, and 5 is not standing here. Spike 008 still holds: `toBigIntLE` is not on the app encode/ATA path. 012 remains the only durable fix.
 
 ## Why this matters
 
