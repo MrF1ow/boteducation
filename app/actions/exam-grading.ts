@@ -1,9 +1,11 @@
 'use server'
 
+/* Pre-existing untyped exam payloads. Leftover cleanup PR-01 only removes the plan gate. */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getCurrentUserId, getCurrentTenantId } from '@/lib/supabase/tenant'
-import { hasPlanFeature, isPlanFeatureError, planFeatureErrorMessage, requirePlanFeature } from '@/lib/plans/server'
+import { getCurrentUserId } from '@/lib/supabase/tenant'
 import { openai } from '@ai-sdk/openai'
 import { generateText } from 'ai'
 import { propagateAttributes } from '@langfuse/tracing'
@@ -236,14 +238,10 @@ export async function gradeExamWithAI(
       ai_grading_prompt: null,
     }
 
-    // Plan gate (#662): AI grading is a Pro+ feature. A tenant below that gets
-    // the same outcome as a teacher who switched AI off — auto-graded questions
-    // are scored, free-text answers wait for teacher review — instead of the
-    // platform paying for model calls the school never bought.
-    const aiGradingAllowed = await hasPlanFeature(await getCurrentTenantId(), 'ai_grading')
+    // Self-hosted leftover cleanup PR-01: AI grading is not plan-gated.
 
     // Check if AI grading is enabled for free-text questions
-    if (!config.ai_grading_enabled || !aiGradingAllowed) {
+    if (!config.ai_grading_enabled) {
       // AI grading disabled — save auto-graded results only, mark free-text as pending teacher review
       const totalPoints = exam.questions.reduce((sum: number, q: any) => sum + (q.points || 10), 0)
       const earnedPoints = Object.values(autoGradedScores).reduce(
@@ -537,17 +535,6 @@ export async function updateExamAIConfig(params: {
 
     if (!isAdmin && !isCourseAuthor) {
       return { success: false, error: 'Unauthorized' }
-    }
-
-    // Turning AI grading ON is the gated act (#662); switching it off or
-    // editing the persona/tone while it stays off is always allowed.
-    if (params.aiGradingEnabled) {
-      try {
-        await requirePlanFeature(await getCurrentTenantId(), 'ai_grading')
-      } catch (err) {
-        if (isPlanFeatureError(err)) return { success: false, error: planFeatureErrorMessage(err) }
-        throw err
-      }
     }
 
     // Update or insert exam AI configuration

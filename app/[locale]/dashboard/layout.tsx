@@ -51,9 +51,6 @@ export default async function DashboardLayout({
                 {user?.email && !user.email_confirmed_at && (
                     <VerifyEmailBanner email={user.email} />
                 )}
-                {/* #517: admins are the only ones who can act on a plan-limit
-                    cutoff, and before this they only saw it if they happened to
-                    open the billing page. */}
                 {role === 'admin' && <AccessCutoffBanner />}
                 <div className="flex flex-1 flex-col">
                     {children}

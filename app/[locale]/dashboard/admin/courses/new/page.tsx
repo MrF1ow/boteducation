@@ -3,7 +3,6 @@ import { getTranslations } from 'next-intl/server'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { AiCourseGenerator } from '@/components/admin/ai-course-generator'
 import { QuickProductCreate } from '@/components/admin/quick-product-create'
-import { checkCourseLimit } from '@/app/actions/teacher/courses'
 import { getCurrentUserId } from '@/lib/supabase/tenant'
 
 // AI starter-course generation (issue #441) runs as a server action invoked
@@ -29,8 +28,6 @@ export default async function AdminNewCoursePage() {
     redirect('/auth/login')
   }
 
-  const limitInfo = await checkCourseLimit()
-
   return (
     <div className="min-h-screen bg-background" data-testid="admin-new-course-page">
       <header className="border-b bg-card">
@@ -50,13 +47,13 @@ export default async function AdminNewCoursePage() {
       </header>
 
       <main className="mx-auto container px-4 py-8 sm:px-6 lg:px-8">
-        <QuickProductCreate limitInfo={limitInfo} />
+        <QuickProductCreate />
         <div className="mx-auto my-6 flex w-full max-w-xl items-center gap-3">
           <span className="h-px flex-1 bg-border" />
           <span className="text-xs uppercase text-muted-foreground">{t('or')}</span>
           <span className="h-px flex-1 bg-border" />
         </div>
-        <AiCourseGenerator disabled={!limitInfo.canCreate} className="mx-auto w-full max-w-xl" />
+        <AiCourseGenerator className="mx-auto w-full max-w-xl" />
       </main>
     </div>
   )
