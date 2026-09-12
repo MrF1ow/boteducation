@@ -23,7 +23,7 @@ export async function Navbar({ headerSettings }: NavbarProps = {}) {
     const isMainPlatform = !tenant || tenant.id === DEFAULT_TENANT_ID
 
     // Load branding overrides from tenant_settings
-    let brandingOverrides: Record<string, any> = {};
+    let brandingOverrides: Record<string, string | undefined> = {};
     if (tenant) {
         const { data: tsData } = await supabase
             .from('tenant_settings')
@@ -31,25 +31,30 @@ export async function Navbar({ headerSettings }: NavbarProps = {}) {
             .eq('tenant_id', tenant.id)
             .in('setting_key', ['site_name', 'logo_url', 'primary_color']);
         if (tsData) {
-            brandingOverrides = tsData.reduce((acc: Record<string, any>, s) => {
-                acc[s.setting_key] = s.setting_value?.value;
+            brandingOverrides = tsData.reduce((acc: Record<string, string | undefined>, s) => {
+                const value = s.setting_value
+                acc[s.setting_key] =
+                    value && typeof value === 'object' && !Array.isArray(value) && typeof value.value === 'string'
+                        ? value.value
+                        : undefined
                 return acc;
             }, {});
         }
     }
 
     // Get user's tenants for the switcher
-    let userTenants: any[] = [];
+    let userTenants: { id: string; slug: string; name: string; role: string }[] = [];
     if (userId) {
         const { data } = await supabase
             .from('tenant_users')
             .select('role, tenant:tenants(id, slug, name)')
             .eq('user_id', userId)
             .eq('status', 'active');
-        userTenants = (data || []).map((tu: any) => ({
-            ...tu.tenant,
-            role: tu.role,
-        }));
+        userTenants = (data ?? []).flatMap((tu) => {
+            const nested = tu.tenant
+            if (!nested || Array.isArray(nested)) return []
+            return [{ id: nested.id, slug: nested.slug, name: nested.name, role: tu.role }]
+        })
     }
 
     const brandName = brandingOverrides.site_name || tenant?.name || t('brand');
@@ -125,7 +130,7 @@ export async function Navbar({ headerSettings }: NavbarProps = {}) {
                     {(headerSettings?.showLanguageSwitcher !== false) && <LanguageSwitcher />}
 
                     {userId ? (
-                        <Button variant="outline" render={<Link href="/dashboard/student" />}>
+                        <Button variant="outline" nativeButton={false} render={<Link href="/dashboard/student" />}>
                             {t('dashboard')}
                         </Button>
                     ) : (
@@ -134,21 +139,22 @@ export async function Navbar({ headerSettings }: NavbarProps = {}) {
                                 <Button
                                     variant="ghost"
                                     className="hidden text-muted-foreground hover:text-foreground sm:inline-flex"
+                                    nativeButton={false}
                                     render={<Link href="/auth/login" />}
                                 >
                                     {t('login')}
                                 </Button>
                             )}
                             {headerSettings?.ctaText && headerSettings?.ctaLink ? (
-                                <Button className="font-medium" render={<Link href={headerSettings.ctaLink} />}>
+                                <Button className="font-medium" nativeButton={false} render={<Link href={headerSettings.ctaLink} />}>
                                     {headerSettings.ctaText}
                                 </Button>
                             ) : isMainPlatform ? (
-                                <Button className="font-medium" render={<Link href="/create-school" />}>
+                                <Button className="font-medium" nativeButton={false} render={<Link href="/create-school" />}>
                                     {t('startFree')} →
                                 </Button>
                             ) : (
-                                <Button className="font-medium" render={<Link href="/auth/sign-up?next=/join-school" />}>
+                                <Button className="font-medium" nativeButton={false} render={<Link href="/auth/sign-up?next=/join-school" />}>
                                     {t('join')} {tenant?.name}
                                 </Button>
                             )}
