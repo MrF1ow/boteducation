@@ -40,6 +40,12 @@ const buttonVariants = cva(
   }
 )
 
+/**
+ * Shadcn/Base UI button. `nativeButton` defaults to true (host is `<button>`).
+ * If `render` swaps the host to a non-button (`<Link>`, `<a>`, `<div>`), pass
+ * `nativeButton={false}` — otherwise Base UI console.errors in development and
+ * Next.js shows the Issues overlay.
+ */
 function Button({
   className,
   variant = "default",

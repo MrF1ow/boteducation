@@ -70,6 +70,7 @@ export async function SchoolLandingPage({ tenant, products }: Props) {
                 size="lg"
                 className="h-14 px-10 text-white font-bold rounded-xl text-lg transition-all duration-200 active:scale-95 border-0"
                 style={{ backgroundColor: accentColor }}
+                nativeButton={false}
                 render={<Link href="/auth/sign-up?next=/join-school" />}
               >
                 {t('join', { name: tenant.name })}
@@ -79,6 +80,7 @@ export async function SchoolLandingPage({ tenant, products }: Props) {
                 size="lg"
                 variant="outline"
                 className="h-14 px-10 bg-zinc-900/50 border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800/80 rounded-xl text-lg backdrop-blur-sm transition-all duration-200"
+                nativeButton={false}
                 render={<Link href="/auth/login" />}
               >
                 {t('alreadyMember')}
@@ -175,6 +177,7 @@ export async function SchoolLandingPage({ tenant, products }: Props) {
                 size="lg"
                 className="h-14 px-10 bg-white font-bold rounded-xl text-lg shadow-xl shadow-black/20 active:scale-95 transition-all duration-200 border-0"
                 style={{ color: accentColor }}
+                nativeButton={false}
                 render={<Link href="/auth/sign-up?next=/join-school" />}
               >
                 {t('ctaButton', { name: tenant.name })}
