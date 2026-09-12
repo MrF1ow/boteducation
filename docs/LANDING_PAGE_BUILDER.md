@@ -222,11 +222,9 @@ Both `PuckEditor` and `PuckPageRenderer` call `useTranslations('puck')` and pass
 
 ---
 
-## Feature Gating
+## Feature gating
 
-- `FEATURE_REQUIRED_PLAN.landing_pages = 'starter'` in `lib/plans/features.ts`
-- Admin route wrapped with `<FeatureGate feature="landing_pages">`
-- Free-plan schools see an upgrade prompt instead of the builder
+Landing-page routes are retired on this fork (`commerce-gone-page`). Do not wrap them in `<FeatureGate>`. That component was deleted.
 
 ---
 

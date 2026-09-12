@@ -265,7 +265,6 @@ SELECT * FROM super_admins WHERE user_id = '<user-uuid>';
 | Admin client (bypass RLS) | `createAdminClient()` from `@/lib/supabase/admin` |
 | Tenant context | `getCurrentTenantId()` from `@/lib/supabase/tenant` |
 | User role | `getUserRole()` from `@/lib/supabase/get-user-role` |
-| Plan features (hook) | `usePlanFeatures()` from `@/lib/hooks/use-plan-features` |
 
 ---
 
