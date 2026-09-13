@@ -34,14 +34,6 @@ export default function ProfileLoading() {
               <Skeleton className="h-36 w-36 rounded-full mx-auto" />
               <Skeleton className="h-20 w-full" />
             </div>
-
-            {/* Subscription Card */}
-            <div className="rounded-lg border p-6 space-y-3">
-              <Skeleton className="h-5 w-28" />
-              <Skeleton className="h-7 w-32" />
-              <Skeleton className="h-4 w-48" />
-              <Skeleton className="h-10 w-full mt-2" />
-            </div>
           </div>
 
           {/* Main Content */}
@@ -74,23 +66,6 @@ export default function ProfileLoading() {
                       <Skeleton className="h-1.5 w-full rounded-full" />
                       <Skeleton className="h-3 w-16" />
                     </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Billing History */}
-            <div className="rounded-lg border">
-              <div className="p-6 border-b">
-                <Skeleton className="h-6 w-32" />
-              </div>
-              <div className="p-6">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="grid grid-cols-4 gap-4 py-3 border-b last:border-0">
-                    <Skeleton className="h-4 w-12" />
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-4 w-16" />
-                    <Skeleton className="h-5 w-20 rounded-full" />
                   </div>
                 ))}
               </div>

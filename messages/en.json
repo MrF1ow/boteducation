@@ -513,13 +513,6 @@
         "showingCourses": "{count, plural, one {# course} other {# courses}} available"
       },
       "profile": {
-        "billingHistory": "Billing History",
-        "records": "{count} Records",
-        "id": "ID",
-        "date": "Date",
-        "amount": "Amount",
-        "status": "Status",
-        "noTransactions": "No transactions found.",
         "accountDetails": "Account Details",
         "accountDetailsSubtitle": "Update your personal information",
         "editProfile": "Edit Profile",
@@ -539,13 +532,6 @@
         "noCoursesYet": "No courses yet",
         "noCoursesYetDesc": "Courses you enroll in will appear here with your progress.",
         "noLessonsYet": "No lessons yet",
-        "txStatus": {
-          "successful": "Successful",
-          "pending": "Pending",
-          "failed": "Failed",
-          "canceled": "Canceled",
-          "refunded": "Refunded"
-        },
         "certificates": {
           "title": "My Certificates",
           "subtitle": "You have earned {count} certificates",

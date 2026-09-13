@@ -513,13 +513,6 @@
         "showingCourses": "{count, plural, one {# curso} other {# cursos}} disponibles"
       },
       "profile": {
-        "billingHistory": "Historial de Facturación",
-        "records": "{count} Registros",
-        "id": "ID",
-        "date": "Fecha",
-        "amount": "Monto",
-        "status": "Estado",
-        "noTransactions": "No se encontraron transacciones.",
         "accountDetails": "Detalles de la Cuenta",
         "accountDetailsSubtitle": "Actualiza tu información personal",
         "editProfile": "Editar Perfil",
@@ -539,13 +532,6 @@
         "noCoursesYet": "Aún no hay cursos",
         "noCoursesYetDesc": "Los cursos en los que te inscribas aparecerán aquí con tu progreso.",
         "noLessonsYet": "Aún no hay lecciones",
-        "txStatus": {
-          "successful": "Exitoso",
-          "pending": "Pendiente",
-          "failed": "Fallido",
-          "canceled": "Cancelado",
-          "refunded": "Reembolsado"
-        },
         "certificates": {
           "title": "Mis Certificados",
           "subtitle": "Has ganado {count} certificados",
