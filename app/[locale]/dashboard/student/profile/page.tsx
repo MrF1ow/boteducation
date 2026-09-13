@@ -5,7 +5,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
-    IconHistory,
     IconSettings,
     IconTrophy,
     IconChartBar,
@@ -31,22 +30,27 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getUiState } from '@/lib/supabase/ui-state'
 import { areToursEnabled } from '@/lib/ui-state-keys'
 
+type EnrolledCourse = {
+    enrollment_id: number
+    progress: number
+    completedLessons: number
+    totalLessons: number
+    course: {
+        course_id: number
+        title: string
+        thumbnail_url: string | null
+    }
+}
+
 async function getProfileData(userId: string, tenantId: string) {
     const supabase = createAdminClient()
 
-    const [profileRes, transactionsRes, certificatesRes, enrollmentsRes] = await Promise.all([
+    const [profileRes, certificatesRes, enrollmentsRes] = await Promise.all([
         supabase
             .from('profiles')
             .select('*, user_roles(role)')
             .eq('id', userId)
             .single(),
-        supabase
-            .from('transactions')
-            .select('*')
-            .eq('user_id', userId)
-            .eq('tenant_id', tenantId)
-            .order('transaction_date', { ascending: false })
-            .limit(10),
         supabase
             .from('certificates')
             .select(`
@@ -71,7 +75,7 @@ async function getProfileData(userId: string, tenantId: string) {
     const enrollmentRows = enrollmentsRes.data || []
     const courseIds = enrollmentRows.map(e => e.course_id)
 
-    let enrolledCourses: any[] = []
+    let enrolledCourses: EnrolledCourse[] = []
 
     if (courseIds.length > 0) {
         const [coursesRes, lessonsRes] = await Promise.all([
@@ -105,22 +109,25 @@ async function getProfileData(userId: string, tenantId: string) {
             return acc
         }, {})
 
-        enrolledCourses = enrollmentRows
-            .map(enrollment => {
-                const course = courseMap.get(enrollment.course_id)
-                if (!course) return null
-                const lessonIds = lessonsByCourse[enrollment.course_id] || []
-                const completed = lessonIds.filter(id => completedSet.has(id)).length
-                const total = lessonIds.length
-                const progress = total > 0 ? Math.round((completed / total) * 100) : 0
-                return { ...enrollment, course, completedLessons: completed, totalLessons: total, progress }
-            })
-            .filter(Boolean)
+        enrolledCourses = enrollmentRows.flatMap((enrollment) => {
+            const course = courseMap.get(enrollment.course_id)
+            if (!course) return []
+            const lessonIds = lessonsByCourse[enrollment.course_id] || []
+            const completed = lessonIds.filter(id => completedSet.has(id)).length
+            const total = lessonIds.length
+            const progress = total > 0 ? Math.round((completed / total) * 100) : 0
+            return [{
+                enrollment_id: enrollment.enrollment_id,
+                course,
+                completedLessons: completed,
+                totalLessons: total,
+                progress,
+            }]
+        })
     }
 
     return {
         profile: profileRes.data,
-        transactions: transactionsRes.data || [],
         certificates: certificatesRes.data || [],
         enrolledCourses,
     }
@@ -164,7 +171,7 @@ function SectionHeader({
 }
 
 // ─── Purchased Course Card ────────────────────────────────────────────────────
-function PurchasedCourseCard({ course: ec, labels }: { course: any; labels: { noLessons: string; lessons: string; completed: string; notStarted: string } }) {
+function PurchasedCourseCard({ course: ec, labels }: { course: EnrolledCourse; labels: { noLessons: string; lessons: string; completed: string; notStarted: string } }) {
     const isCompleted = ec.progress === 100
     const hasStarted = ec.completedLessons > 0
 
@@ -247,7 +254,7 @@ export default async function ProfilePage() {
         redirect('/auth/login')
     }
 
-    const { profile, transactions, certificates, enrolledCourses } = await getProfileData(user.id, tenantId)
+    const { profile, certificates, enrolledCourses } = await getProfileData(user.id, tenantId)
     const uiState = await getUiState(user.id)
     const userInitial = profile?.full_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || "U"
 
@@ -255,20 +262,7 @@ export default async function ProfilePage() {
     const tCommon = await getTranslations('common')
     const tProgress = await getTranslations('dashboard.student.progress')
 
-    const transactionStatusLabel = (status: string) => {
-        const map: Record<string, string> = {
-            successful: t('txStatus.successful'),
-            pending: t('txStatus.pending'),
-            failed: t('txStatus.failed'),
-            canceled: t('txStatus.canceled'),
-            refunded: t('txStatus.refunded'),
-        }
-        return map[status] || status
-    }
-
     const dateFormatter = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' })
-    const currencyFormatter = (amount: number, currency: string) =>
-        new Intl.NumberFormat(undefined, { style: 'currency', currency: currency || 'USD' }).format(amount)
 
     return (
         <div className="min-h-screen bg-background pb-20" data-testid="profile-page">
@@ -298,7 +292,7 @@ export default async function ProfilePage() {
                                     <h2 className="text-xl font-bold tracking-tight truncate">{profile?.full_name || user.email?.split('@')[0]}</h2>
                                     <p className="text-sm text-muted-foreground truncate">{user.email}</p>
                                     <div className="flex justify-center gap-2 pt-1">
-                                        {profile?.user_roles?.map((ur: any) => (
+                                        {profile?.user_roles?.map((ur: { role: string }) => (
                                             <Badge key={ur.role} variant="secondary" className="uppercase tracking-widest text-[10px] font-bold">
                                                 {ur.role}
                                             </Badge>
@@ -385,7 +379,7 @@ export default async function ProfilePage() {
                             <CardContent className="p-6">
                                 {enrolledCourses.length > 0 ? (
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        {enrolledCourses.map((ec: any) => (
+                                        {enrolledCourses.map((ec) => (
                                             <PurchasedCourseCard
                                                 key={ec.enrollment_id}
                                                 course={ec}
@@ -418,64 +412,6 @@ export default async function ProfilePage() {
                             </CardContent>
                         </Card>
 
-                        {/* Billing History */}
-                        <Card className="border border-border overflow-hidden">
-                            <CardHeader className="border-b border-border">
-                                <SectionHeader
-                                    icon={<IconHistory size={20} />}
-                                    title={t('billingHistory')}
-                                    badge={
-                                        <Badge variant="outline" className="font-bold text-xs">
-                                            {t('records', { count: transactions.length })}
-                                        </Badge>
-                                    }
-                                />
-                            </CardHeader>
-                            <CardContent className="p-0">
-                                {transactions.length > 0 ? (
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full text-left border-collapse">
-                                            <thead>
-                                                <tr className="bg-muted/30">
-                                                    <th className="px-6 py-3 text-xs font-bold uppercase tracking-widest text-muted-foreground">{t('id')}</th>
-                                                    <th className="px-6 py-3 text-xs font-bold uppercase tracking-widest text-muted-foreground">{t('date')}</th>
-                                                    <th className="px-6 py-3 text-xs font-bold uppercase tracking-widest text-muted-foreground">{t('amount')}</th>
-                                                    <th className="px-6 py-3 text-xs font-bold uppercase tracking-widest text-muted-foreground">{t('status')}</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-border">
-                                                {transactions.map((tx: any) => (
-                                                    <tr key={tx.transaction_id} className="hover:bg-muted/10 transition-colors">
-                                                        <td className="px-6 py-4 text-sm font-medium text-muted-foreground tabular-nums">#{tx.transaction_id}</td>
-                                                        <td className="px-6 py-4 text-sm font-medium">{dateFormatter.format(new Date(tx.transaction_date))}</td>
-                                                        <td className="px-6 py-4 text-sm font-bold text-foreground tabular-nums">
-                                                            {currencyFormatter(tx.amount, tx.currency)}
-                                                        </td>
-                                                        <td className="px-6 py-4">
-                                                            <Badge variant="outline" className={cn(
-                                                                "font-bold uppercase text-[10px]",
-                                                                tx.status === 'successful'
-                                                                    ? "text-emerald-600 dark:text-emerald-400 border-emerald-500/20 bg-emerald-500/5"
-                                                                    : tx.status === 'pending'
-                                                                        ? "text-amber-600 dark:text-amber-400 border-amber-500/20 bg-amber-500/5"
-                                                                        : "text-muted-foreground border-border"
-                                                            )}>
-                                                                {transactionStatusLabel(tx.status)}
-                                                            </Badge>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                ) : (
-                                    <div className="p-12 text-center text-muted-foreground">
-                                        {t('noTransactions')}
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-
                         {/* Certificates Section */}
                         <div className="space-y-4">
                             <SectionHeader
@@ -486,8 +422,8 @@ export default async function ProfilePage() {
 
                             {certificates.length > 0 ? (
                                 <div className="grid gap-4">
-                                    {certificates.map((cert: any) => (
-                                        <StudentCertificateCard key={cert.id} certificate={cert} />
+                                    {certificates.map((cert) => (
+                                        <StudentCertificateCard key={cert.certificate_id} certificate={cert} />
                                     ))}
                                 </div>
                             ) : (

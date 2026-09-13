@@ -77,8 +77,9 @@ test.describe('Student Features', () => {
     test('profile page loads with user settings', async ({ page }) => {
       await page.goto(`${BASE}/en/dashboard/student/profile`)
       await expect(page.getByTestId('profile-page')).toBeVisible()
+      await expect(page.getByText('Billing History')).toHaveCount(0)
+      await expect(page.getByText('Historial de Facturación')).toHaveCount(0)
 
-      // Profile page should contain form elements or user information
       const body = page.locator('body')
       await expect(body).not.toBeEmpty()
     })
